@@ -1,0 +1,40 @@
+node_modules
+.DS_Store
+
+/.cache
+/build
+/app/build
+/public/build/
+/public/_dev
+/app/public/build
+/prisma/dev.sqlite
+/prisma/dev.sqlite-journal
+database.sqlite
+
+.env
+.env
+
+
+
+
+
+/extensions/*/dist
+
+# Ignore shopify files created during app dev
+.shopify/*
+.shopify.lock
+
+
+# Security and Privacy
+.env
+/prisma/*.sqlite
+/prisma/*.sqlite-journal
+/public/bin-locations/*.txt
+
+# Kiro IDE Configuration (local only)
+.kiro/
+.vscode/
+setup-kiro.cjs
+
+# Keep only the setup guide in git
+!KIRO_SETUP_GUIDE.md

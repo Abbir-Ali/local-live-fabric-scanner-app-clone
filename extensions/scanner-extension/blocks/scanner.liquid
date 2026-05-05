@@ -1,0 +1,1513 @@
+<style>
+  :root {
+    --p-primary: #C9A273;
+    /* Brass */
+    --p-bg: #F1ECE5;
+    /* Light Beige */
+    --p-white: #FAF7F3;
+    /* Light BG Color */
+    --p-border: #D8BFA4;
+    /* Dark Beige */
+    --p-text: #000000;
+    /* Black */
+    --p-text-subdued: #6b5e58;
+    /* Warm Truffle — readable, neutral */
+    --p-accent: #c4a092;
+    /* Terracotta — original accent */
+    --p-success: #A9CEB2;
+    /* Teal */
+  }
+
+  #fabric-scanner-root {
+    padding-bottom: 50px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  #fabric-scanner-root.fb-ready {
+    opacity: 1;
+  }
+
+  .fb-header {
+    background: var(--p-white);
+    padding: 10px 20px;
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--p-border);
+  }
+
+  .fb-user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .fb-badge {
+    background: var(--p-white);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--p-text-subdued);
+    border: 1px solid var(--p-border);
+  }
+
+  .fb-logout-btn {
+    background: none;
+    border: none;
+    color: var(--p-text-subdued);
+    cursor: pointer;
+    padding: 5px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .fb-logout-btn:hover {
+    opacity: 1;
+  }
+
+  .fb-tabs {
+    display: flex;
+    background: var(--p-white);
+    border-bottom: 1px solid var(--p-border);
+  }
+
+  .fb-tab-btn {
+    flex: 1;
+    padding: 18px 10px;
+    border: none;
+    background: none;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 11px;
+    cursor: pointer;
+    color: var(--p-text-subdued);
+    transition: all 0.2s;
+  }
+
+  .fb-tab-btn.active {
+    color: var(--p-primary);
+    border-bottom: 3px solid var(--p-primary);
+  }
+
+  .fb-pane {
+    display: none;
+    padding: 15px;
+  }
+
+  .fb-pane.active {
+    display: block;
+  }
+
+  /* Orders styling */
+  .fb-order-card {
+    background: var(--p-white);
+    border: 1px solid var(--p-border);
+    margin-bottom: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+  }
+
+  .fb-order-row {
+    display: flex;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .fb-order-header {
+    padding: 15px 20px;
+    background: var(--p-white);
+    font-weight: 700;
+    border-bottom: 1px solid var(--p-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .fb-order-header:hover {
+    background: #F1ECE5;
+  }
+
+  .fb-order-items {
+    display: none;
+  }
+
+  .fb-chevron {
+    transition: transform 0.2s;
+    width: 20px;
+    height: 20px;
+  }
+
+  .fb-chevron.open {
+    transform: rotate(180deg);
+  }
+
+  /* Stock card styling */
+  .fb-stock-card {
+    background: var(--p-white);
+    border: 1px solid var(--p-border);
+    margin-bottom: 20px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .fb-stock-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  }
+
+  .fb-stock-body {
+    display: flex;
+    padding: 15px;
+    gap: 15px;
+    align-items: center;
+  }
+
+  .fb-stock-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 1px solid var(--p-border);
+    flex-shrink: 0;
+  }
+
+  .fb-stock-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .fb-stock-title {
+    font-weight: 800;
+    font-size: 15px;
+    color: var(--p-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .fb-stock-sku {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--p-text-subdued);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .fb-stock-qty {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--p-primary);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .fb-stock-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--p-border);
+  }
+
+  .fb-stock-bin {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--p-text-subdued);
+    background: rgba(130, 115, 108, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .fb-item-info {
+    font-size: 12px;
+    color: var(--p-text-subdued);
+    line-height: 1.4;
+  }
+
+  .fb-item-info .fb-status {
+    color: #A9CEB2 !important;
+    font-weight: bold;
+  }
+
+  .fb-item-info .fb-status::before {
+    content: ' | ';
+  }
+
+  @media (max-width: 600px) {
+    .fb-item-info .fb-status {
+      display: block;
+      margin-top: 2px;
+    }
+
+    .fb-item-info .fb-status::before {
+      content: '';
+    }
+  }
+
+  .fb-btn {
+    background: var(--p-primary);
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    min-height: 36px;
+    flex-shrink: 0;
+  }
+
+  .fb-btn:hover {
+    background: #b59285;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .fb-btn:disabled {
+    background: var(--p-border);
+    color: var(--p-text-subdued);
+    cursor: not-allowed;
+  }
+
+  .fb-btn-secondary {
+    background: var(--p-text-subdued);
+    padding: 10px 18px;
+  }
+
+  .fb-btn-secondary:hover {
+    background: #6b5e58;
+  }
+
+  .fb-btn-success {
+    background: var(--p-success);
+    padding: 10px 18px;
+  }
+
+  .fb-btn-success:hover {
+    background: #3e4f4d;
+  }
+
+  .fb-view-order-btn {
+    background: var(--p-primary);
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    text-decoration: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  }
+
+  .fb-view-order-btn:hover {
+    background: #b59285;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+  }
+
+  .fb-view-order-btn:active {
+    transform: translateY(0);
+  }
+
+  .fb-input {
+    width: 100%;
+    padding: 12px 15px;
+    margin: 12px 0;
+    border: 1px solid var(--p-border);
+    border-radius: 8px;
+    background: var(--p-white);
+    box-sizing: border-box;
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+
+  .fb-input:focus {
+    border-color: var(--p-primary);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(196, 160, 146, 0.1);
+  }
+
+  /* Loader styles injected via JS into document.head for theme scoping bypass */
+
+  .fb-dots-loader {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .fb-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #EFDFD0;
+    box-shadow: 0 0 16px rgba(239, 223, 208, 0.5);
+  }
+
+  .fb-pagination-box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+  }
+
+  .btn-pagination {
+    background: var(--p-white);
+    border: 1px solid var(--p-border);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--p-text);
+    transition: all 0.2s;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-pagination:hover {
+    background: #F1ECE5;
+    border-color: var(--p-text-subdued);
+  }
+
+  .btn-pagination:active {
+    opacity: 0.8;
+  }
+
+  .fb-pagination-box {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 15px 0;
+  }
+
+  .fb-pagination-box span {
+    font-size: 12px;
+    color: var(--p-text-subdued);
+    min-width: 60px;
+    text-align: center;
+  }
+
+  /* Scanner Enhancements */
+  #scanner-container {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    border: 2px solid #D8BFA4;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+  }
+
+  #reader {
+    width: 100% !important;
+    border: none !important;
+  }
+
+  #reader video {
+    width: 100% !important;
+    height: auto !important;
+    object-fit: cover;
+  }
+
+  .scan-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .scan-line {
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: var(--p-accent);
+    box-shadow: 0 0 15px var(--p-accent);
+    top: 0;
+    animation: fb-scanAnim 2s linear infinite;
+  }
+
+  @keyframes fb-scanAnim {
+    0% {
+      top: 0%;
+    }
+
+    50% {
+      top: 100%;
+    }
+
+    100% {
+      top: 0%;
+    }
+  }
+
+  .scan-corner {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border: 4px solid var(--p-accent);
+  }
+
+  .corner-tl {
+    top: 10px;
+    left: 10px;
+    border-right: 0;
+    border-bottom: 0;
+  }
+
+  .corner-tr {
+    top: 10px;
+    right: 10px;
+    border-left: 0;
+    border-bottom: 0;
+  }
+
+  .corner-bl {
+    bottom: 10px;
+    left: 10px;
+    border-right: 0;
+    border-top: 0;
+  }
+
+  .corner-br {
+    bottom: 10px;
+    right: 10px;
+    border-left: 0;
+    border-top: 0;
+  }
+
+  #auth-section {
+    display: -webkit-box !important;
+    display: -ms-flexbox !important;
+    display: flex !important;
+    -webkit-box-pack: center !important;
+    -ms-flex-pack: center !important;
+    justify-content: center !important;
+    -webkit-box-align: center !important;
+    -ms-flex-align: center !important;
+    align-items: center !important;
+    min-height: 500px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 40px 20px;
+    box-sizing: border-box;
+  }
+
+  .fb-auth-box {
+    max-width: 400px;
+    width: 100%;
+    background: var(--p-white);
+    padding: 40px;
+    border-radius: 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    border: 1px solid var(--p-border);
+    animation: fb-slideUp 0.6s cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  @keyframes fb-slideUp {
+    0% {
+      transform: translateY(30px);
+      opacity: 0;
+    }
+
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .fb-pass-wrapper {
+    position: relative;
+    margin: 12px 0;
+  }
+
+  .fb-toggle-pass {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: var(--p-text-subdued);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    transition: color 0.2s;
+  }
+
+  .fb-toggle-pass:hover {
+    color: var(--p-primary);
+  }
+
+  /* ========== MOBILE RESPONSIVE STYLES ========== */
+
+  /* Search and sort container - keep in one row */
+  .fb-search-sort-container {
+    margin-bottom: 15px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+
+  .fb-search-sort-container input,
+  .fb-search-sort-container select {
+    box-sizing: border-box;
+    height: 36px;
+    padding: 0 12px;
+  }
+
+  .fb-search-sort-container input {
+    flex: 7;
+    min-width: 140px;
+    font-size: 13px;
+  }
+
+  .fb-search-sort-container select {
+    flex: 3;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 768px) {
+    #fabric-scanner-root {
+      padding-bottom: 40px;
+    }
+
+    /* Search and sort responsive */
+    .fb-search-sort-container {
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+
+    .fb-search-sort-container input,
+    .fb-search-sort-container select {
+      font-size: 14px;
+    }
+
+    /* Tabs responsiveness */
+    .fb-tabs {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .fb-tab-btn {
+      padding: 16px 12px;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: auto;
+    }
+
+    /* Card responsive */
+    .fb-order-card,
+    .fb-stock-card {
+      margin-bottom: 12px;
+      border-radius: 8px;
+    }
+
+    /* Order row responsive - Flexbox layout */
+    .fb-order-row {
+      gap: 8px;
+      padding: 12px;
+    }
+
+    /* Mobile: Stack columns vertically */
+    .fb-order-row > div:first-child {
+      flex-direction: column !important;
+      gap: 12px !important;
+    }
+
+    .fb-order-row > div:first-child > div:first-child {
+      flex: 0 0 60px !important;
+      align-self: center;
+    }
+
+    .fb-order-row > div:first-child > div:first-child img {
+      width: 60px !important;
+      height: 60px !important;
+    }
+
+    .fb-order-row > div:first-child > div:nth-child(2) {
+      flex: 1 !important;
+      min-width: 0 !important;
+    }
+
+    .fb-order-row > div:first-child > div:nth-child(3) {
+      flex: 0 0 auto !important;
+      align-items: center !important;
+      width: 100% !important;
+    }
+
+    .fb-order-row > div:first-child > div:nth-child(3) > div,
+    .fb-order-row > div:first-child > div:nth-child(3) > button {
+      width: 100% !important;
+      text-align: center !important;
+    }
+
+    /* Stock card responsive */
+    .fb-stock-body {
+      flex-wrap: wrap;
+      padding: 12px;
+      gap: 10px;
+    }
+
+    .fb-stock-img {
+      width: 60px;
+      height: 60px;
+    }
+
+    .fb-stock-title {
+      font-size: 14px;
+    }
+
+    .fb-stock-sku {
+      font-size: 10px;
+    }
+
+    /* Button responsive */
+    .fb-btn {
+      padding: 9px 14px;
+      font-size: 12px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .fb-btn-secondary {
+      padding: 9px 14px;
+      white-space: nowrap;
+    }
+
+    .fb-btn-success {
+      padding: 9px 14px;
+      white-space: nowrap;
+    }
+
+    /* Input responsive */
+    .fb-input {
+      padding: 10px 12px;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+
+    /* Order header responsive */
+    .fb-order-header {
+      padding: 12px 15px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    /* Pagination responsive */
+    .fb-pagination-box {
+      margin: 15px 0;
+      gap: 8px;
+    }
+
+    .btn-pagination {
+      padding: 10px;
+      font-size: 12px;
+    }
+
+    .fb-pagination-box span {
+      font-size: 11px;
+      min-width: 55px;
+    }
+
+    /* Pane padding */
+    .fb-pane {
+      padding: 10px;
+    }
+
+    /* Search input */
+    #inv-search-input,
+    #order-search {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 16px;
+      padding: 10px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    #fabric-scanner-root {
+      padding-bottom: 30px;
+    }
+
+    /* Keep search/sort in one row even on small screens */
+    .fb-search-sort-container {
+      gap: 6px;
+      flex-wrap: nowrap;
+    }
+
+    .fb-search-sort-container input {
+      flex: 7;
+      min-width: 100px;
+      font-size: 12px;
+    }
+
+    .fb-search-sort-container select {
+      flex: 3;
+      font-size: 11px;
+    }
+
+    .fb-tab-btn {
+      padding: 14px 8px;
+      font-size: 9px;
+      letter-spacing: 0.3px;
+    }
+
+    .fb-order-header {
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+
+    .fb-item-info {
+      font-size: 11px;
+    }
+
+    .fb-order-row {
+      gap: 6px;
+      padding: 10px;
+    }
+
+    /* Mobile: Stack flexbox layout vertically */
+    .fb-order-row > div:first-child {
+      flex-direction: column !important;
+      gap: 10px !important;
+    }
+
+    .fb-order-row > div:first-child > div:first-child {
+      flex: 0 0 55px !important;
+      align-self: center;
+    }
+
+    .fb-order-row > div:first-child > div:first-child img {
+      width: 55px !important;
+      height: 55px !important;
+    }
+
+    .fb-order-row > div:first-child > div:nth-child(2) {
+      flex: 1 !important;
+      min-width: 0 !important;
+    }
+
+    .fb-order-row > div:first-child > div:nth-child(3) {
+      flex: 0 0 auto !important;
+      align-items: center !important;
+      width: 100% !important;
+    }
+
+    .fb-order-row > div:first-child > div:nth-child(3) > div,
+    .fb-order-row > div:first-child > div:nth-child(3) > button {
+      width: 100% !important;
+      text-align: center !important;
+      font-size: 11px !important;
+      padding: 7px 10px !important;
+    }
+
+    /* SCAN button positioning on mobile */
+    .fb-order-row > div:first-child > div:last-child {
+      position: absolute !important;
+      bottom: 10px !important;
+      right: 10px !important;
+    }
+
+    .fb-order-row > div:first-child > div:last-child button {
+      font-size: 10px !important;
+      padding: 6px 8px !important;
+    }
+
+    .fb-stock-body {
+      padding: 10px;
+    }
+
+    .fb-stock-img {
+      width: 50px;
+      height: 50px;
+    }
+
+    .fb-stock-title {
+      font-size: 12px;
+    }
+
+    .fb-stock-sku {
+      font-size: 9px;
+    }
+
+    .fb-stock-info {
+      gap: 2px;
+    }
+
+    .fb-btn {
+      padding: 8px 12px;
+      font-size: 11px;
+      min-height: 36px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .fb-input {
+      padding: 9px 10px;
+      font-size: 14px;
+      margin: 6px 0;
+      border-radius: 6px;
+    }
+
+    /* Ensure touch targets are minimum 44px */
+    button {
+      min-height: 44px;
+    }
+
+    .fb-order-header {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* Make order cards stack better */
+    .fb-order-card {
+      margin-bottom: 10px;
+    }
+
+    /* Responsive order info */
+    .fb-pane {
+      padding: 8px;
+    }
+
+    /* View order button */
+    .fb-view-order-btn {
+      padding: 8px 10px;
+      font-size: 11px;
+      min-height: 40px;
+    }
+
+    /* Status and badges */
+    .fb-status {
+      display: block;
+      margin: 2px 0;
+    }
+
+    /* Avoid text wrapping issues */
+    .fb-stock-title,
+    .fb-order-header {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      word-break: break-word;
+    }
+
+    /* Make pagination more compact */
+    .fb-pagination-box {
+      margin: 12px 0;
+      gap: 6px;
+    }
+
+    .btn-pagination {
+      padding: 8px;
+      font-size: 11px;
+      min-height: 40px;
+      flex: 1;
+      min-width: 60px;
+    }
+
+    .fb-pagination-box span {
+      font-size: 10px;
+      min-width: 50px;
+      flex: 0 0 auto;
+    }
+
+    /* Badge adjustments */
+    .fb-badge {
+      padding: 3px 8px;
+      font-size: 10px;
+    }
+
+    /* Better spacing for order rows */
+    .fb-order-row div:last-child {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-shrink: 0;
+      white-space: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Loader text responsive */
+    .fb-loader-text {
+      font-size: 12px;
+      padding: 0 15px;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .fb-search-sort-container {
+      gap: 4px;
+    }
+
+    .fb-search-sort-container input {
+      flex: 7;
+      font-size: 12px;
+    }
+
+    .fb-search-sort-container select {
+      flex: 3;
+      font-size: 11px;
+    }
+
+    .fb-tab-btn {
+      padding: 12px 6px;
+      font-size: 8px;
+    }
+
+    .fb-btn {
+      padding: 8px 10px;
+      font-size: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .fb-order-header {
+      padding: 8px 10px;
+      font-size: 11px;
+    }
+
+    .fb-stock-img {
+      width: 45px;
+      height: 45px;
+    }
+
+    .fb-input {
+      font-size: 13px;
+    }
+
+    /* 360px: Stack flexbox layout vertically */
+    .fb-order-row > div:first-child {
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+
+    .fb-order-row > div:first-child > div:first-child {
+      flex: 0 0 50px !important;
+      align-self: center;
+    }
+
+    .fb-order-row > div:first-child > div:first-child img {
+      width: 50px !important;
+      height: 50px !important;
+    }
+
+    .fb-order-row > div:first-child > div:nth-child(2) {
+      flex: 1 !important;
+      min-width: 0 !important;
+    }
+
+    .fb-order-row > div:first-child > div:nth-child(3) {
+      flex: 0 0 auto !important;
+      align-items: center !important;
+      width: 100% !important;
+    }
+
+    .fb-order-row > div:first-child > div:nth-child(3) > div,
+    .fb-order-row > div:first-child > div:nth-child(3) > button {
+      width: 100% !important;
+      text-align: center !important;
+      font-size: 10px !important;
+      padding: 6px 8px !important;
+    }
+
+    /* SCAN button positioning on 360px */
+    .fb-order-row > div:first-child > div:last-child {
+      position: absolute !important;
+      bottom: 8px !important;
+      right: 8px !important;
+    }
+
+    .fb-order-row > div:first-child > div:last-child button {
+      font-size: 9px !important;
+      padding: 5px 6px !important;
+    }
+
+    .fb-order-row > div:first-child > div:nth-child(1) {
+      height: 45px;
+    }
+  }
+
+  /* Touch-friendly improvements */
+  @media (hover: none) {
+    .fb-btn:active,
+    .fb-order-header:active,
+    button:active {
+      opacity: 0.8;
+      transform: scale(0.98);
+    }
+
+    .fb-btn:hover {
+      box-shadow: none;
+    }
+  }
+
+  /* Toast Notification System */
+  .fb-toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 100001;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 400px;
+    pointer-events: none;
+  }
+
+  .fb-toast {
+    background: var(--p-white);
+    border: 1px solid var(--p-border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 300px;
+    pointer-events: all;
+    animation: fb-toastSlideIn 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .fb-toast::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+  }
+
+  .fb-toast.fb-toast-success::before {
+    background: var(--p-success);
+  }
+
+  .fb-toast.fb-toast-error::before {
+    background: #D5AAAC;
+  }
+
+  .fb-toast.fb-toast-warning::before {
+    background: #f57c00;
+  }
+
+  .fb-toast.fb-toast-info::before {
+    background: var(--p-primary);
+  }
+
+  .fb-toast-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .fb-toast-success .fb-toast-icon {
+    background: rgba(72, 91, 89, 0.1);
+    color: var(--p-success);
+  }
+
+  .fb-toast-error .fb-toast-icon {
+    background: rgba(213, 170, 172, 0.15);
+    color: #8a5a5c;
+  }
+
+  .fb-toast-warning .fb-toast-icon {
+    background: rgba(245, 124, 0, 0.1);
+    color: #f57c00;
+  }
+
+  .fb-toast-info .fb-toast-icon {
+    background: rgba(196, 160, 146, 0.1);
+    color: var(--p-primary);
+  }
+
+  .fb-toast-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .fb-toast-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--p-text);
+    margin-bottom: 4px;
+  }
+
+  .fb-toast-message {
+    font-size: 13px;
+    color: var(--p-text-subdued);
+    line-height: 1.4;
+    word-wrap: break-word;
+  }
+
+  .fb-toast-close {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--p-text-subdued);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+
+  .fb-toast-close:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--p-text);
+  }
+
+  @keyframes fb-toastSlideIn {
+    0% {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    100% {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .fb-toast.fb-toast-exit {
+    animation: fb-toastSlideOut 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  }
+
+  @keyframes fb-toastSlideOut {
+    0% {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .fb-toast-container {
+      top: 10px;
+      right: 10px;
+      left: 10px;
+      max-width: none;
+    }
+
+    .fb-toast {
+      min-width: 0;
+      width: 100%;
+    }
+  }
+
+  /* Login Error Styling */
+  .fb-login-error {
+    margin-top: 15px;
+    padding: 12px 16px;
+    background: #FAEBE1;
+    border: 1px solid #D5AAAC;
+    border-radius: 8px;
+    color: #5a3a3b;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: fb-shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  }
+
+  .fb-login-error svg {
+    flex-shrink: 0;
+  }
+
+  @keyframes fb-shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+      transform: translateX(-5px);
+    }
+    20%,
+    40%,
+    60%,
+    80% {
+      transform: translateX(5px);
+    }
+  }
+</style>
+
+<div id="fb-loader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(10,14,20,0.85); z-index:2147483647; justify-content:center; align-items:center; flex-direction:column; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);">
+  <div style="display:flex; align-items:center; gap:14px;">
+    <div class="fb-dot" style="width:16px; height:16px; border-radius:50%; background:#EFDFD0; box-shadow:0 0 16px rgba(239,223,208,0.5); animation:fbDotBounce 0.9s ease-in-out infinite; animation-delay:0s;"></div>
+    <div class="fb-dot" style="width:16px; height:16px; border-radius:50%; background:#EFDFD0; box-shadow:0 0 16px rgba(239,223,208,0.5); animation:fbDotBounce 0.9s ease-in-out infinite; animation-delay:0.18s;"></div>
+    <div class="fb-dot" style="width:16px; height:16px; border-radius:50%; background:#EFDFD0; box-shadow:0 0 16px rgba(239,223,208,0.5); animation:fbDotBounce 0.9s ease-in-out infinite; animation-delay:0.36s;"></div>
+  </div>
+</div>
+
+<div id="fabric-scanner-root">
+  <header class="fb-header" id="main-nav">
+    <div style="font-weight: 800; letter-spacing: 2px; font-size: 14px; color: var(--p-text-subdued);">
+      FABRIC SCANNER
+    </div>
+    <div class="fb-user-info">
+      <div class="fb-badge" id="user-display-name">Guest</div>
+      <button class="fb-logout-btn" id="logout-trigger" style="display:none;">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M12 2v2H4v12h8v2H2V2h10zm7 8l-4 4v-3H9V9h6V6l4 4z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="auth-section">
+    <div class="fb-auth-box">
+      <h2 style="margin-top: 0; font-weight: 800; letter-spacing: -0.5px; color: var(--p-text-subdued);">
+        Welcome Back
+      </h2>
+      <div style="margin-bottom: 25px; font-size: 14px; color: var(--p-text-subdued);">Please sign in to continue</div>
+
+      <input
+        type="text"
+        id="staff-id"
+        placeholder="Username / Email"
+        class="fb-input"
+        style="margin-bottom: 5px;"
+      >
+
+      <div class="fb-pass-wrapper">
+        <input type="password" id="staff-pass" placeholder="PIN" class="fb-input" style="margin: 0;">
+        <div class="fb-toggle-pass" id="toggle-pass-btn">
+          <svg
+            id="eye-open"
+            width="20"
+            height="20"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M1 12s4-8 9-8 9 8 9 8-4 8-9 8-9-8-9-8z"></path>
+            <circle cx="10" cy="12" r="3"></circle>
+          </svg>
+          <svg
+            id="eye-closed"
+            style="display:none;"
+            width="20"
+            height="20"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+                d="M17.94 17.94A10.07 10.07 0 0 1 10 20c-5 0-9-8-9-8a11.54 11.54 0 0 1 2.51-4.06M8.47 8.47a3 3 0 0 0 4.06 4.06M1 1l18 18">
+            </path>
+          </svg>
+        </div>
+      </div>
+
+      <button
+        id="login-btn"
+        class="fb-btn"
+        style="width: 100%; margin-top: 20px; height: 50px; font-size: 16px;"
+      >
+        Sign In
+      </button>
+      <button
+        id="clear-session-btn"
+        class="fb-btn"
+        style="width: 100%; margin-top: 10px; background: #D5AAAC; color: #000; display: none;"
+      >
+        Clear Old Session
+      </button>
+
+      <div id="login-error" style="display:none;"></div>
+
+      <div
+        id="session-warning"
+        style="display: none; margin-top: 20px; padding: 12px; background: #FAEBE1; border: 1px solid #D5AAAC; border-radius: 8px; font-size: 13px; color: #5a3a3b;"
+      >
+        ⚠️ You have an old session from a previous app. Click "Clear Old Session" to log in with new credentials.
+      </div>
+    </div>
+  </div>
+
+  <div id="app-content" style="display:none;">
+    <div class="fb-tabs">
+      <button class="fb-tab-btn active" id="tab-stock" data-tab="stock-pane" style="display:none;">Stock</button>
+      <button class="fb-tab-btn" id="tab-orders" data-tab="orders-pane" style="display:none;">Orders</button>
+      <button class="fb-tab-btn" id="tab-history" data-tab="history-pane" style="display:none;">History</button>
+    </div>
+
+    <div id="stock-pane" class="fb-pane active">
+      <div class="fb-search-sort-container">
+        <input
+          type="text"
+          id="inv-search-input"
+          placeholder="Search title, SKU, BIN..."
+          class="fb-input"
+          style="margin:0; height: 38px; padding: 0 15px; border-radius: 8px;"
+        >
+        <select
+          id="inv-sort-select"
+          class="fb-input"
+          style="margin:0; font-size: 13px; height: 38px; padding: 0 8px; border-radius: 8px;"
+        >
+          <option value="CREATED_AT:true">Newest</option>
+          <option value="CREATED_AT:false">Oldest</option>
+          <option value="TITLE:false">A-Z</option>
+          <option value="TITLE:true">Z-A</option>
+          <option value="INVENTORY_TOTAL:false">Low Stock</option>
+          <option value="INVENTORY_TOTAL:true">High Stock</option>
+        </select>
+      </div>
+      <div id="inventory-list"></div>
+      <div class="fb-pagination-box" id="stock-pagination" style="display:none;">
+        <button id="prev-inventory" class="btn-pagination">Prev</button>
+        <span id="page-label-inventory">Page 1</span>
+        <button id="next-inventory" class="btn-pagination">Next</button>
+      </div>
+    </div>
+
+    <div id="orders-pane" class="fb-pane">
+      <div class="fb-search-sort-container">
+        <input
+          type="text"
+          id="order-search-input"
+          placeholder="Search order #, name, email..."
+          class="fb-input"
+          style="margin:0; height: 38px; padding: 0 15px; border-radius: 8px;"
+        >
+      </div>
+      <div id="order-container"></div>
+      <div class="fb-pagination-box" id="orders-pagination" style="display:none;">
+        <button id="prev-orders" class="btn-pagination">Prev</button>
+        <span id="page-label-orders">Page 1</span>
+        <button id="next-orders" class="btn-pagination">Next</button>
+      </div>
+    </div>
+
+    <div id="history-pane" class="fb-pane">
+      <div class="fb-search-sort-container">
+        <input
+          type="text"
+          id="history-search-input"
+          placeholder="Search order #, name, email..."
+          class="fb-input"
+          style="margin:0; height: 38px; padding: 0 15px; border-radius: 8px;"
+        >
+      </div>
+      <div id="history-container"></div>
+      <div class="fb-pagination-box" id="history-pagination" style="display:none;">
+        <button id="prev-history" class="btn-pagination">Prev</button>
+        <span id="page-label-history">Page 1</span>
+        <button id="next-history" class="btn-pagination">Next</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="fb-toast-container" class="fb-toast-container"></div>
+
+<div
+  id="camera-modal"
+  style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:99999; flex-direction:column; align-items:center; justify-content:center;"
+>
+  <div style="color:white; font-size:18px; font-weight:bold; margin-bottom:10px; text-align:center; padding: 0 20px;">
+    SCANNING: <span id="scan-target-name" style="color:#c4a092;">--</span>
+  </div>
+  <div id="scan-target-sku" style="color:#EFDFD0; font-size:14px; margin-bottom:15px;">SKU: --</div>
+  <div
+    style="background:#1a1410; color:#EFDFD0; padding:10px 20px; border-radius:30px; margin-bottom:20px; font-weight:bold; font-size:16px;"
+  >
+    Scan on <span id="scan-target-bin" style="color:#c4a092;">BIN #--</span>
+  </div>
+
+  <div id="scanner-container">
+    <div id="reader"></div>
+    <div class="scan-overlay">
+      <div class="scan-line">&nbsp;</div>
+      <div class="scan-corner corner-tl">&nbsp;</div>
+      <div class="scan-corner corner-tr">&nbsp;</div>
+      <div class="scan-corner corner-bl">&nbsp;</div>
+      <div class="scan-corner corner-br">&nbsp;</div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;">
+    <button
+      id="scanner-cancel-btn"
+      class="fb-btn"
+      style="background: #D5AAAC; color: #000; padding: 12px 30px; font-size: 16px;"
+    >
+      CANCEL SCAN
+    </button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js" defer></script>
+{{ 'print-label.js' | asset_url | script_tag }}
+
+{% schema %}
+{
+  "name": "Fabric Scanner",
+  "target": "section",
+  "settings": []
+}
+{% endschema %}

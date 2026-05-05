@@ -1,0 +1,1 @@
+-- Migration already applied in init migration (BinLocation table already exists)
