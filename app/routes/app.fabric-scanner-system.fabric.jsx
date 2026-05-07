@@ -1,4 +1,4 @@
-import { useLoaderData, useFetcher, useNavigate, useSearchParams, useNavigation } from "@remix-run/react";
+import { useLoaderData, useFetcher, useNavigate, useSearchParams, useNavigation, useRevalidator } from "@remix-run/react";
 import { createPortal } from "react-dom";
 import { authenticate } from "../shopify.server";
 import {
@@ -8,7 +8,7 @@ import {
 } from "@shopify/polaris";
 import { ArrowRightIcon, EditIcon, ExportIcon, SearchIcon, PlusIcon, DeleteIcon, LocationIcon } from "@shopify/polaris-icons";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { getFabricInventory, getShopLocations, getAllFabricInventory, getGlobalInventoryStats } from "../services/order.server";
+import { getFabricInventory, getShopLocations, getAllFabricInventory, getGlobalInventoryStats, getAssignedBinLocations } from "../services/order.server";
 import { adjustInventory, setInventory } from "../services/inventory.server";
 import { getBinLocations, importBinLocations, addManualBinLocation, deleteBinLocation, clearAllBinLocations } from "../models/binLocations.server";
 
@@ -52,6 +52,7 @@ export const loader = async ({ request }) => {
 
   const shopDomain = session.shop.replace(".myshopify.com", "");
   const binLocations = await getBinLocations(session.shop);
+  const assignedBins = await getAssignedBinLocations(admin);
 
   return {
     products: edges,
@@ -67,6 +68,7 @@ export const loader = async ({ request }) => {
     globalStats,
     isBinSearch,
     binLocations,
+    assignedBins,
   };
 };
 
@@ -85,6 +87,26 @@ export const action = async ({ request }) => {
   if (actionType === "updateBin") {
     const productId = formData.get("productId");
     const binValue = formData.get("binValue");
+
+    // Check if this bin location is already assigned to another product
+    if (binValue && binValue.trim()) {
+      try {
+        const assignedBins = await getAssignedBinLocations(admin);
+        const existing = assignedBins[binValue.trim()];
+        if (existing && existing.productId !== productId) {
+          console.log(`[UPDATE BIN] Bin "${binValue}" already in use by "${existing.productTitle}" (${existing.productId})`);
+          return {
+            success: false,
+            error: `Bin location "${binValue}" is already assigned to "${existing.productTitle}". Each bin can only be used by one product at a time.`,
+            field: "bin",
+            conflictProduct: existing.productTitle,
+          };
+        }
+      } catch (checkError) {
+        console.error("[UPDATE BIN] Uniqueness check failed:", checkError);
+        // Continue with the save — don't block on a failed check
+      }
+    }
 
     try {
       const metafieldsMutation = `#graphql
@@ -225,6 +247,66 @@ export const action = async ({ request }) => {
     return { success: true, actionType };
   }
 
+  if (actionType === "clearBin") {
+    const productId = formData.get("productId");
+
+    try {
+      // Use metafieldsDelete (plural) with ownerId + namespace + key
+      // This works whether the metafield exists or not — no error if already cleared
+      const deleteResponse = await admin.graphql(
+        `#graphql
+        mutation clearBinMetafield($ownerId: ID!) {
+          metafieldsDelete(metafields: [
+            {
+              ownerId: $ownerId,
+              namespace: "custom",
+              key: "bin_locations"
+            }
+          ]) {
+            deletedMetafields {
+              ownerId
+              namespace
+              key
+            }
+            userErrors { field message }
+          }
+        }`,
+        { variables: { ownerId: productId } }
+      );
+
+      const deleteData = await deleteResponse.json();
+
+      if (deleteData.errors) {
+        console.error("[CLEAR BIN] GraphQL errors:", deleteData.errors);
+        return {
+          success: false,
+          error: `Failed to clear bin location: ${deleteData.errors[0]?.message || "Unknown error"}`,
+          field: "bin",
+        };
+      }
+
+      const userErrors = deleteData.data?.metafieldsDelete?.userErrors || [];
+      if (userErrors.length > 0) {
+        console.error("[CLEAR BIN] User errors:", userErrors);
+        return {
+          success: false,
+          error: `Failed to clear bin location: ${userErrors[0].message}`,
+          field: "bin",
+        };
+      }
+
+      console.log(`[CLEAR BIN] Cleared bin metafield for product ${productId}`);
+      return { success: true, field: "bin", updatedValue: "", actionType: "clearBin" };
+    } catch (error) {
+      console.error("[CLEAR BIN] Error:", error);
+      return {
+        success: false,
+        error: `Unable to clear bin location: ${error.message}`,
+        field: "bin",
+      };
+    }
+  }
+
   if (actionType === "adjustInventory") {
     const inventoryItemId = formData.get("inventoryItemId");
     const locationId = formData.get("locationId");
@@ -270,19 +352,21 @@ export const action = async ({ request }) => {
  * Main page component.
  */
 export default function FabricInventory() {
-  const { products: rawProducts, pageInfo, page, shopDomain, locations, currentLocationId, initialQuery, initialSort, initialReverse, initialLimit = 5, globalStats: initialGlobalStats, isBinSearch: initialIsBinSearch, binLocations: serverBinLocations } = useLoaderData();
+  const { products: rawProducts, pageInfo, page, shopDomain, locations, currentLocationId, initialQuery, initialSort, initialReverse, initialLimit = 5, globalStats: initialGlobalStats, isBinSearch: initialIsBinSearch, binLocations: serverBinLocations, assignedBins: serverAssignedBins } = useLoaderData();
   const products = rawProducts || [];
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const navigation = useNavigation();
   const fetcher = useFetcher();
   const { mode, setMode } = useSetIndexFiltersMode();
+  const revalidator = useRevalidator();
 
   const stats = initialGlobalStats || { total: 0, lowStock: 0, outOfStock: 0 };
   const isBinSearch = initialIsBinSearch || false;
 
   // Bin locations come from the server (DB) — always in sync across all admin users
   const [binLocations, setBinLocations] = useState(serverBinLocations || []);
+  const [assignedBins, setAssignedBins] = useState(serverAssignedBins || {});
   const [importModalActive, setImportModalActive] = useState(false);
   const [importFeedback, setImportFeedback] = useState(null); // { type: 'success'|'error', message }
 
@@ -305,6 +389,10 @@ export default function FabricInventory() {
   useEffect(() => {
     setBinLocations(serverBinLocations || []);
   }, [serverBinLocations]);
+
+  useEffect(() => {
+    setAssignedBins(serverAssignedBins || {});
+  }, [serverAssignedBins]);
 
   const locationOptions = useMemo(() => {
     if (!locations || locations.length === 0) return [{ label: "No locations found", value: "" }];
@@ -734,7 +822,7 @@ export default function FabricInventory() {
           </div>
         </IndexTable.Cell>
         <IndexTable.Cell>
-          <BinEditor productId={id} initialBin={binMeta?.value || ""} binLocations={binLocations} />
+          <BinEditor productId={id} initialBin={binMeta?.value || ""} binLocations={binLocations} assignedBins={assignedBins} onBinChanged={() => revalidator.revalidate()} />
         </IndexTable.Cell>
         <IndexTable.Cell>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1468,7 +1556,7 @@ function BinLocationModal({ active, onClose, onImport, onClear, binLocations, fe
  * IndexTable DOM — this is the only reliable way to avoid Polaris table
  * row event interception swallowing clicks inside the picker.
  */
-function BinEditor({ productId, initialBin, binLocations = [] }) {
+function BinEditor({ productId, initialBin, binLocations = [], assignedBins = {}, onBinChanged }) {
   const fetcher = useFetcher();
   const [bin, setBin] = useState(initialBin);
   const [isOpen, setIsOpen] = useState(false);
@@ -1477,6 +1565,7 @@ function BinEditor({ productId, initialBin, binLocations = [] }) {
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [panelPos, setPanelPos] = useState({ top: 0, left: 0 });
   const [errorMessage, setErrorMessage] = useState(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const buttonRef = useRef(null);
   const searchRef = useRef(null);
   const [portalRoot, setPortalRoot] = useState(null);
@@ -1499,6 +1588,8 @@ function BinEditor({ productId, initialBin, binLocations = [] }) {
       setSelectedBin(null);
       setSearchValue("");
       setErrorMessage(null);
+      // Refresh the page data so assignedBins map updates
+      if (onBinChanged) setTimeout(() => onBinChanged(), 300);
     } else if (fetcher.data?.field === "bin" && fetcher.data?.error) {
       setErrorMessage(fetcher.data.error);
       // Auto-hide after 6 seconds
@@ -1560,6 +1651,13 @@ function BinEditor({ productId, initialBin, binLocations = [] }) {
   }, [searchValue, binLocations]);
 
   const handleSelectBin = (loc) => {
+    // Block selection if bin is already in use by another product
+    const status = getBinStatus(loc);
+    if (status.inUse) {
+      setErrorMessage(`"${loc}" is already assigned to "${status.usedBy}". Each bin can only be used by one product.`);
+      setTimeout(() => setErrorMessage(null), 5000);
+      return;
+    }
     setSelectedBin(loc);
     setSearchValue("");
     setHighlightedIndex(-1);
@@ -1595,6 +1693,43 @@ function BinEditor({ productId, initialBin, binLocations = [] }) {
         closePicker();
         break;
     }
+  };
+
+  // Check if a bin location is already in use by another product
+  const getBinStatus = (loc) => {
+    const assigned = assignedBins[loc];
+    if (assigned && assigned.productId !== productId) {
+      return { inUse: true, usedBy: assigned.productTitle };
+    }
+    return { inUse: false };
+  };
+
+  const handleClearBin = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    setShowClearConfirm(true);
+  };
+
+  const confirmClear = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    setShowClearConfirm(false);
+    fetcher.submit(
+      { actionType: "clearBin", productId },
+      { method: "post" }
+    );
+  };
+
+  const cancelClear = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    setShowClearConfirm(false);
   };
 
   const isSaving = fetcher.state !== "idle";
@@ -1715,24 +1850,52 @@ function BinEditor({ productId, initialBin, binLocations = [] }) {
                     No matches found
                   </div>
                 ) : (
-                  filteredLocations.map((loc, idx) => (
-                    <div
-                      key={idx}
-                      onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); handleSelectBin(loc); }}
-                      style={{
-                        padding: "9px 12px",
-                        cursor: "pointer",
-                        borderBottom: idx < filteredLocations.length - 1 ? "1px solid var(--p-color-border-subdued)" : "none",
-                        background: highlightedIndex === idx ? "#F1ECE5" : "transparent",
-                        fontFamily: "monospace",
-                        fontSize: "13px",
-                        userSelect: "none",
-                      }}
-                      onMouseEnter={() => setHighlightedIndex(idx)}
-                    >
-                      {loc}
-                    </div>
-                  ))
+                  filteredLocations.map((loc, idx) => {
+                    const status = getBinStatus(loc);
+                    return (
+                      <div
+                        key={idx}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          if (status.inUse) return; // Prevent selecting in-use bins
+                          handleSelectBin(loc);
+                        }}
+                        style={{
+                          padding: "9px 12px",
+                          cursor: status.inUse ? "not-allowed" : "pointer",
+                          borderBottom: idx < filteredLocations.length - 1 ? "1px solid var(--p-color-border-subdued)" : "none",
+                          background: status.inUse ? "#FFF4E5" : (highlightedIndex === idx ? "#F1ECE5" : "transparent"),
+                          fontFamily: "monospace",
+                          fontSize: "13px",
+                          userSelect: "none",
+                          opacity: status.inUse ? 0.7 : 1,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                        onMouseEnter={() => !status.inUse && setHighlightedIndex(idx)}
+                        title={status.inUse ? `In use by: ${status.usedBy}` : ""}
+                      >
+                        <span>{loc}</span>
+                        {status.inUse && (
+                          <span style={{
+                            fontSize: "10px",
+                            fontWeight: "600",
+                            color: "#B44D12",
+                            background: "#FFECD6",
+                            padding: "2px 6px",
+                            borderRadius: "10px",
+                            whiteSpace: "nowrap",
+                            fontFamily: "inherit",
+                          }}>
+                            🔒 In Use
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </>
@@ -1760,7 +1923,7 @@ function BinEditor({ productId, initialBin, binLocations = [] }) {
 
   return (
     <>
-      <div style={{ position: "relative", display: "inline-block" }}>
+      <div style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: "6px" }}>
         <button
           ref={buttonRef}
           onMouseDown={openPicker}
@@ -1778,7 +1941,81 @@ function BinEditor({ productId, initialBin, binLocations = [] }) {
         >
           {bin ? `📍 ${bin}` : "+ Assign Bin"}
         </button>
-        {errorMessage && (
+        {bin && (
+          <button
+            onMouseDown={handleClearBin}
+            disabled={isSaving}
+            title="Clear bin location"
+            style={{
+              padding: "4px 8px",
+              borderRadius: "var(--p-border-radius-200)",
+              border: "1px solid #E0B4B4",
+              background: "#FFF0F0",
+              cursor: isSaving ? "not-allowed" : "pointer",
+              fontSize: "11px",
+              fontWeight: "600",
+              color: "#B44D12",
+              whiteSpace: "nowrap",
+              opacity: isSaving ? 0.5 : 1,
+            }}
+          >
+            ✕ Clear
+          </button>
+        )}
+        {/* Inline clear confirmation tooltip */}
+        {showClearConfirm && (
+          <div style={{
+            position: "absolute",
+            top: "100%",
+            left: "0",
+            marginTop: "6px",
+            padding: "10px 14px",
+            background: "#FAF7F3",
+            border: "1px solid #D8BFA4",
+            borderRadius: "var(--p-border-radius-300)",
+            boxShadow: "0 4px 16px rgba(148, 85, 40, 0.12)",
+            zIndex: 10001,
+            width: "220px",
+          }}>
+            <div style={{ fontSize: "12px", color: "#945528", marginBottom: "8px", fontWeight: "500" }}>
+              Remove <strong>{bin}</strong> from this product?
+            </div>
+            <div style={{ display: "flex", gap: "6px" }}>
+              <button
+                onMouseDown={confirmClear}
+                style={{
+                  flex: 1,
+                  padding: "6px 10px",
+                  background: "#B44D12",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "var(--p-border-radius-200)",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                }}
+              >
+                Yes, Clear
+              </button>
+              <button
+                onMouseDown={cancelClear}
+                style={{
+                  flex: 1,
+                  padding: "6px 10px",
+                  background: "none",
+                  border: "1px solid #D8BFA4",
+                  borderRadius: "var(--p-border-radius-200)",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  color: "#945528",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {errorMessage && !showClearConfirm && (
           <div style={{
             position: "absolute",
             top: "100%",

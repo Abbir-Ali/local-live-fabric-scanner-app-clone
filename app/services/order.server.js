@@ -587,6 +587,67 @@ export async function getAllFabricInventory(admin) {
   }
 }
 
+/**
+ * Get all assigned bin locations across products.
+ * Returns a map of binLocation → { productId, productTitle }
+ * Used to enforce uniqueness — a bin location can only be assigned to one product at a time.
+ */
+export async function getAssignedBinLocations(admin) {
+  const assignedBins = {};
+  let hasNextPage = true;
+  let cursor = null;
+
+  try {
+    while (hasNextPage) {
+      const response = await admin.graphql(
+        `#graphql
+        query getAssignedBins($cursor: String) {
+          products(first: 100, after: $cursor, query: "product_type:'Swatch Item'") {
+            pageInfo { hasNextPage endCursor }
+            edges {
+              node {
+                id
+                title
+                binLocation: metafield(namespace: "custom", key: "bin_locations") {
+                  value
+                }
+              }
+            }
+          }
+        }`,
+        { variables: { cursor } }
+      );
+
+      const resJson = await response.json();
+
+      if (resJson.errors) {
+        console.error("[getAssignedBinLocations] GraphQL errors:", resJson.errors);
+        break;
+      }
+
+      const products = resJson.data?.products?.edges || [];
+
+      for (const { node } of products) {
+        const binValue = node.binLocation?.value?.trim();
+        if (binValue) {
+          assignedBins[binValue] = {
+            productId: node.id,
+            productTitle: node.title,
+          };
+        }
+      }
+
+      hasNextPage = resJson.data?.products?.pageInfo?.hasNextPage || false;
+      cursor = resJson.data?.products?.pageInfo?.endCursor || null;
+    }
+
+    return assignedBins;
+  } catch (error) {
+    console.error("[getAssignedBinLocations] Error:", error);
+    return {};
+  }
+}
+
 export async function getGlobalInventoryStats(admin, locationId) {
   let stats = { total: 0, lowStock: 0, outOfStock: 0 };
   let hasNextPage = true;
