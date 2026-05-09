@@ -1,13 +1,16 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "6d99701dfcd3a49c1780c81226d549b9"
+client_id = "590b34610065cd74e2f9885f772dbc8e"
 name = "local-live-fabric-scanner-app"
 application_url = "https://example.com/app/fabric-scanner-system"
 embedded = true
 
-[build]
-automatically_update_urls_on_dev = true
-include_config_on_deploy = true
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_customers,read_fulfillments,read_inventory,read_locations,read_merchant_managed_fulfillment_orders,read_orders,read_products,write_inventory,write_merchant_managed_fulfillment_orders,write_products"
+
+[auth]
+redirect_urls = [ "https://example.com/auth/callback" ]
 
 [webhooks]
 api_version = "2026-07"
@@ -24,12 +27,16 @@ api_version = "2026-07"
   topics = [ "orders/updated" ]
   uri = "/webhooks/orders/updated"
 
-[access_scopes]
-# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_customers,read_inventory,read_locations,read_merchant_managed_fulfillment_orders,read_orders,read_products,write_inventory,write_merchant_managed_fulfillment_orders,write_products"
+  [[webhooks.subscriptions]]
+  topics = [ "orders/cancelled" ]
+  uri = "/webhooks/orders/cancelled"
 
-[auth]
-redirect_urls = [ "https://example.com/auth/callback" ]
+  [[webhooks.subscriptions]]
+  topics = [ "fulfillments/update" ]
+  uri = "/webhooks/fulfillments/update"
+
+[build]
+automatically_update_urls_on_dev = true
 
 [app_proxy]
 url = "https://example.com/app/fabric-scanner-system/api/proxy"

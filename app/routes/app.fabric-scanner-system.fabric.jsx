@@ -8,7 +8,7 @@ import {
 } from "@shopify/polaris";
 import { ArrowRightIcon, EditIcon, ExportIcon, SearchIcon, PlusIcon, DeleteIcon, LocationIcon } from "@shopify/polaris-icons";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { getFabricInventory, getShopLocations, getAllFabricInventory, getGlobalInventoryStats, getAssignedBinLocations } from "../services/order.server";
+import { getFabricInventory, getShopLocations, getAllFabricInventory, getGlobalInventoryStats, getAssignedBinLocations, getLowStockProducts } from "../services/order.server";
 import { adjustInventory, setInventory } from "../services/inventory.server";
 import { getBinLocations, importBinLocations, addManualBinLocation, deleteBinLocation, clearAllBinLocations } from "../models/binLocations.server";
 
@@ -335,6 +335,17 @@ export const action = async ({ request }) => {
     }
   }
 
+  if (actionType === "getLowStock") {
+    const locationId = formData.get("locationId");
+    try {
+      const lowStockItems = await getLowStockProducts(admin, locationId);
+      return { success: true, lowStockItems };
+    } catch (error) {
+      console.error("[ACTION] getLowStock Error:", error);
+      return { success: false, error: error.message, lowStockItems: [] };
+    }
+  }
+
   if (actionType === "exportAllBarcodes") {
     try {
       const allBarcodes = await getAllFabricInventory(admin);
@@ -654,7 +665,7 @@ export default function FabricInventory() {
     const labelsHtml = barcodes.map((item, idx) => `
       <div class="label-page">
         <div class="header">
-          Bin: ${item.binNumber || "N/A"}
+          Bin: ${item.binNumber || ""}
         </div>
         <div class="barcode-container">
           <svg id="barcode-${idx}"></svg>
@@ -748,14 +759,39 @@ export default function FabricInventory() {
 
   useEffect(() => {
     if (fetcher.data?.allBarcodes) {
-      const barcodesToPrint = fetcher.data.allBarcodes.filter(b => b.barcode);
+      const barcodesToPrint = fetcher.data.allBarcodes.filter(b => b.barcode && b.binNumber && b.binNumber.trim() !== "");
       if (barcodesToPrint.length === 0) {
-        alert("No barcodes found to export.");
+        alert("No barcodes with assigned bin locations found to print.");
       } else {
         handleBulkPrint(barcodesToPrint);
       }
     }
   }, [fetcher.data]);
+
+  // Low Stock Modal state
+  const [lowStockModalActive, setLowStockModalActive] = useState(false);
+  const [lowStockItems, setLowStockItems] = useState([]);
+  const [lowStockLoading, setLowStockLoading] = useState(false);
+  const lowStockFetcher = useFetcher();
+
+  useEffect(() => {
+    if (lowStockFetcher.data?.lowStockItems) {
+      setLowStockItems(lowStockFetcher.data.lowStockItems);
+      setLowStockLoading(false);
+    } else if (lowStockFetcher.data && !lowStockFetcher.data.success) {
+      setLowStockItems([]);
+      setLowStockLoading(false);
+    }
+  }, [lowStockFetcher.data]);
+
+  const handleViewLowStock = useCallback(() => {
+    setLowStockModalActive(true);
+    setLowStockLoading(true);
+    lowStockFetcher.submit(
+      { actionType: "getLowStock", locationId: currentLocationId },
+      { method: "post" }
+    );
+  }, [lowStockFetcher, currentLocationId]);
 
 
   const resourceName = { singular: 'product', plural: 'products' };
@@ -883,6 +919,10 @@ export default function FabricInventory() {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(350%); }
+        }
       `}</style>
       <Layout>
         <BinLocationModal
@@ -961,7 +1001,9 @@ export default function FabricInventory() {
                     <div style={{ width: '1px', background: 'var(--p-color-border-subdued)', height: '40px' }} />
                     <BlockStack gap="100">
                       <Text variant="bodyXs" tone="subdued" fontWeight="medium">LOW STOCK</Text>
-                      <Text variant="headingLg" as="p" tone="warning">{stats.lowStock}</Text>
+                      <div onClick={handleViewLowStock} style={{ cursor: "pointer", textDecoration: "underline" }}>
+                        <Text variant="headingLg" as="p" tone="warning">{stats.lowStock}</Text>
+                      </div>
                     </BlockStack>
                     <div style={{ width: '1px', background: 'var(--p-color-border-subdued)', height: '40px' }} />
                     <BlockStack gap="100">
@@ -995,36 +1037,24 @@ export default function FabricInventory() {
         <Layout.Section>
           <Card padding="0">
             <Box minHeight="400px" position="relative">
-              {/* Loading Overlay */}
+              {/* Loading indicator — non-blocking, sits over table only */}
               {isLoading && (
                 <div style={{
                   position: 'absolute',
                   top: 0,
                   left: 0,
                   right: 0,
-                  bottom: 0,
-                  background: 'rgba(255, 255, 255, 0.85)',
-                  backdropFilter: 'blur(3px)',
+                  height: '3px',
                   zIndex: 100,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexDirection: 'column',
-                  gap: '16px',
-                  pointerEvents: 'all',
-                  cursor: 'wait',
+                  overflow: 'hidden',
+                  pointerEvents: 'none',
                 }}>
                   <div style={{
-                    width: '48px',
-                    height: '48px',
-                    border: '4px solid #E3E3E3',
-                    borderTop: '4px solid #C9A273',
-                    borderRadius: '50%',
-                    animation: 'spin 0.8s linear infinite',
+                    width: '40%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, transparent, #C9A273, transparent)',
+                    animation: 'shimmer 1.2s ease-in-out infinite',
                   }} />
-                  <Text variant="bodyMd" tone="subdued" fontWeight="semibold">
-                    {isSearching ? 'Searching...' : 'Loading...'}
-                  </Text>
                 </div>
               )}
 
@@ -1052,26 +1082,27 @@ export default function FabricInventory() {
                 filters={[]}
                 canCreateNewView={false}
                 queryPlaceholder="Search by SKU, title, or bin location..."
-                disabled={isLoading}
               />
 
-              <IndexTable
-                resourceName={resourceName}
-                itemCount={products.length}
-                selectable={false}
-                headings={[
-                  { title: 'No.' },
-                  { title: 'Image' },
-                  { title: 'Product Detail' },
-                  { title: 'Stock Status' },
-                  { title: 'Bin Location' },
-                  { title: 'Barcode Reference' },
-                ]}
-                hasMoreItems={pageInfo?.hasNextPage}
-                loading={false}
-              >
-                {rowMarkup}
-              </IndexTable>
+              <div style={{ opacity: isLoading ? 0.5 : 1, transition: 'opacity 0.2s ease' }}>
+                <IndexTable
+                  resourceName={resourceName}
+                  itemCount={products.length}
+                  selectable={false}
+                  headings={[
+                    { title: 'No.' },
+                    { title: 'Image' },
+                    { title: 'Product Detail' },
+                    { title: 'Stock Status' },
+                    { title: 'Bin Location' },
+                    { title: 'Barcode Reference' },
+                  ]}
+                  hasMoreItems={pageInfo?.hasNextPage}
+                  loading={false}
+                >
+                  {rowMarkup}
+                </IndexTable>
+              </div>
 
               <Box padding="400" borderTopWidth="025" borderColor="border">
                 <InlineStack align="space-between" blockAlign="center">
@@ -1098,6 +1129,65 @@ export default function FabricInventory() {
           </Card>
         </Layout.Section>
       </Layout>
+
+      <Modal
+        open={lowStockModalActive}
+        onClose={() => setLowStockModalActive(false)}
+        title={`Low Stock Items (${lowStockItems.length})`}
+        size="large"
+      >
+        <Modal.Section>
+          {lowStockLoading ? (
+            <Box padding="800" style={{ textAlign: "center" }}>
+              <BlockStack gap="300" align="center">
+                <Text variant="bodyMd" tone="subdued">Loading low stock items...</Text>
+              </BlockStack>
+            </Box>
+          ) : lowStockItems.length === 0 ? (
+            <Box padding="800" style={{ textAlign: "center" }}>
+              <BlockStack gap="200" align="center">
+                <Text variant="headingSm" tone="subdued">No low stock items found.</Text>
+                <Text variant="bodySm" tone="subdued">All products have 10+ units in stock.</Text>
+              </BlockStack>
+            </Box>
+          ) : (
+            <IndexTable
+              resourceName={{ singular: "product", plural: "products" }}
+              itemCount={lowStockItems.length}
+              selectable={false}
+              headings={[
+                { title: "#" },
+                { title: "Product" },
+                { title: "SKU" },
+                { title: "Bin Location" },
+                { title: "Stock" },
+              ]}
+            >
+              {lowStockItems.map((item, index) => (
+                <IndexTable.Row id={item.id} key={item.id} position={index}>
+                  <IndexTable.Cell>
+                    <Text variant="bodySm" fontWeight="bold">{index + 1}</Text>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <Text variant="bodySm" fontWeight="semibold" breakWord>{item.title}</Text>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <Text variant="bodySm">{item.sku}</Text>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <Badge tone={item.binLocation === "N/A" ? "new" : "info"}>
+                      {item.binLocation}
+                    </Badge>
+                  </IndexTable.Cell>
+                  <IndexTable.Cell>
+                    <Badge tone="warning">{item.stock}</Badge>
+                  </IndexTable.Cell>
+                </IndexTable.Row>
+              ))}
+            </IndexTable>
+          )}
+        </Modal.Section>
+      </Modal>
 
     </Page>
   );

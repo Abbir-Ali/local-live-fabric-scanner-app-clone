@@ -143,7 +143,13 @@ export default function Index() {
                     title: "Fulfill orders faster",
                     desc: "Generate shipping labels and mark items as fulfilled in seconds.",
                   },
-                ].map(({ step, title, desc }) => (
+                  {
+                    step: "4",
+                    title: "Start scanning now",
+                    desc: "Open the staff scanner on your phone to begin fulfilling orders.",
+                    action: true,
+                  },
+                ].map(({ step, title, desc, action }) => (
                   <div
                     key={step}
                     style={{
@@ -152,8 +158,8 @@ export default function Index() {
                       gap: "1rem",
                       padding: "1.25rem 1.5rem",
                       borderRadius: "14px",
-                      background: "#FAF7F3",
-                      border: "1px solid #EFDFD0",
+                      background: action ? "#F1ECE5" : "#FAF7F3",
+                      border: action ? "1px solid #C9A273" : "1px solid #EFDFD0",
                       boxShadow: "0 4px 16px rgba(0,0,0,0.05)",
                     }}
                   >
@@ -174,11 +180,24 @@ export default function Index() {
                     >
                       {step}
                     </div>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <Text as="p" variant="headingSm" fontWeight="semibold">
                         {title}
                       </Text>
                       <Text tone="subdued">{desc}</Text>
+                      {action && (
+                        <div style={{ marginTop: "10px" }}>
+                          <Button
+                            url="https://tovfurniture.com/pages/swatch-fabric-scanner"
+                            external
+                            target="_blank"
+                            variant="primary"
+                            size="slim"
+                          >
+                            Open Scanner Page
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

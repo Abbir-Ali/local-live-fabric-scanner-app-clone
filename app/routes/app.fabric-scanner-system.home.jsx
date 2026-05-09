@@ -354,7 +354,7 @@ export default function Index() {
                   </div>
                   <div style={{ width: '300px' }}>
                     <TextField
-                      placeholder="Search by order #, name, email..."
+                      placeholder="Search by order #, name, email, note..."
                       value={pendingSearchValue}
                       onChange={setPendingSearchValue}
                       clearButton
@@ -437,7 +437,7 @@ export default function Index() {
                   </div>
                   <div style={{ width: '300px' }}>
                     <TextField
-                      placeholder="Search by order #, name, email..."
+                      placeholder="Search by order #, name, email, note..."
                       value={partialSearchValue}
                       onChange={setPartialSearchValue}
                       clearButton
@@ -526,7 +526,7 @@ export default function Index() {
                   </div>
                   <div style={{ width: '300px' }}>
                     <TextField
-                      placeholder="Search by order #, name, email..."
+                      placeholder="Search by order #, name, email, note..."
                       value={fulfilledSearchValue}
                       onChange={setFulfilledSearchValue}
                       clearButton
@@ -688,6 +688,7 @@ function PartialOrderRow({ order, logs, index, shopDomain }) {
           <Text variant="bodyMd" fontWeight="bold" as="span">{order.name}</Text>
           <Badge tone="warning">PARTIALLY FULFILLED</Badge>
           <Badge tone="info">{progress} items shipped</Badge>
+          {order.note && <Text variant="bodySm" tone="subdued" as="span">📝 {order.note}</Text>}
           <Text tone="subdued" as="span" style={{ whiteSpace: 'nowrap' }}>{new Date(order.updatedAt || order.createdAt).toLocaleString()}</Text>
         </InlineStack>
 
@@ -804,6 +805,7 @@ function OrderRow({ order, status, logs, index, shopDomain }) {
           <Text variant="bodyMd" fontWeight="bold" tone="subdued" as="span">{index}.</Text>
           <Text variant="bodyMd" fontWeight="bold" as="span">{order.name}</Text>
           <Badge tone={status === 'fulfilled' ? 'success' : 'attention'}>{status.toUpperCase()}</Badge>
+          {order.note && <Text variant="bodySm" tone="subdued" as="span">📝 {order.note}</Text>}
           <Text tone="subdued" as="span" style={{ whiteSpace: 'nowrap' }}>{new Date(order.updatedAt || order.createdAt).toLocaleString()}</Text>
         </InlineStack>
 

@@ -80,6 +80,64 @@
 
     const setLoader = (show) => (document.getElementById('fb-loader').style.display = show ? 'flex' : 'none');
 
+    // Non-blocking progress bar for tab data loading
+    const setTabLoading = (show) => {
+        document.getElementById('fb-progress-bar').style.display = show ? 'block' : 'none';
+    };
+
+    // Skeleton generators matching actual UI layout
+    const skel = 'background:#EDE7E0; border-radius:4px;';
+    const skeletonRow = () => `
+      <div style="display:flex !important; align-items:center; gap:14px; padding:16px 18px; margin-bottom:10px; border:1px solid #E3DDD6; border-radius:10px; background:#fff;">
+        <div style="width:60px; height:60px; border-radius:8px; flex-shrink:0; ${skel}">&nbsp;</div>
+        <div style="flex:1;">
+          <div style="width:55%; height:14px; margin-bottom:8px; ${skel}">&nbsp;</div>
+          <div style="width:35%; height:11px; margin-bottom:6px; ${skel}">&nbsp;</div>
+          <div style="width:50px; height:18px; border-radius:10px; ${skel}">&nbsp;</div>
+        </div>
+        <div style="width:70px; height:26px; border-radius:4px; ${skel}">&nbsp;</div>
+      </div>`;
+
+    const skeletonOrderRow = () => `
+      <div style="display:flex !important; padding:16px 18px; margin-bottom:10px; border:1px solid #E3DDD6; border-radius:10px; background:#fff; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:130px; height:15px; ${skel}">&nbsp;</div>
+          <div style="width:55px; height:20px; border-radius:10px; ${skel}">&nbsp;</div>
+        </div>
+        <div style="width:90px; height:30px; border-radius:6px; ${skel}">&nbsp;</div>
+      </div>`;
+
+    const skeletonHistoryRow = () => `
+      <div style="display:block !important; padding:16px 18px; margin-bottom:10px; border:1px solid #E3DDD6; border-radius:10px; background:#fff;">
+        <div style="display:flex !important; align-items:center; justify-content:space-between;">
+          <div>
+            <div style="width:120px; height:15px; margin-bottom:6px; ${skel}">&nbsp;</div>
+            <div style="width:70px; height:12px; margin-bottom:4px; ${skel}">&nbsp;</div>
+            <div style="width:50px; height:11px; ${skel}">&nbsp;</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="width:90px; height:30px; margin-bottom:6px; border-radius:6px; ${skel}">&nbsp;</div>
+            <div style="width:60px; height:11px; margin-left:auto; ${skel}">&nbsp;</div>
+          </div>
+        </div>
+        <div style="width:100%; height:34px; margin-top:12px; border-radius:4px; background:#E8DDD4;">&nbsp;</div>
+      </div>`;
+
+    const showInventorySkeleton = () => {
+        const el = document.getElementById('inventory-list');
+        if (el) el.innerHTML = Array(5).fill('').map(() => skeletonRow()).join('');
+    };
+
+    const showOrdersSkeleton = () => {
+        const el = document.getElementById('order-container');
+        if (el) el.innerHTML = Array(4).fill('').map(() => skeletonOrderRow()).join('');
+    };
+
+    const showHistorySkeleton = () => {
+        const el = document.getElementById('history-container');
+        if (el) el.innerHTML = Array(4).fill('').map(() => skeletonHistoryRow()).join('');
+    };
+
     const loadState = () => {
         try {
             const v = localStorage.getItem(STORAGE_KEY_VERIFIED);
@@ -348,6 +406,7 @@
                                 <div style="padding:14px 15px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
                                     <div style="flex:1; min-width:0;">
                                         <div style="font-weight:700; font-size:14px; margin-bottom:4px;">${hIdx}. ORDER ${e.node.name}</div>
+                                        ${e.node.note ? `<div style="font-size:11px; color:var(--p-text-subdued); margin-bottom:4px;">📝 ${e.node.note}</div>` : ''}
                                         <div style="font-size:12px; color:var(--p-success); font-weight:600; margin-bottom:2px;">✓ FULFILLED</div>
                                         <div style="font-size:12px; color:var(--p-text-subdued);">By: <b>${fulfiller}</b></div>
                                     </div>
@@ -422,17 +481,19 @@
         console.log(
             `[STOCK FETCH] Direction: ${dir}, isPagination: ${isPagination}, Current page: ${invPage}, Query: ${q}`
         );
-        setLoader(true);
+        setTabLoading(true);
+        showInventorySkeleton();
         let cur = dir === 'next' ? invEnd : invStart;
         if (!cur) dir = 'next';
 
-        // Check if this is a BIN search (more permissive detection)
+        // Check if this is a BIN search — only match explicit BIN patterns
+        // BIN format examples: A1:3, B12:5, AB3:1, BIN-A1, bin A1
+        // NOT SKUs like: DC6198, EVA1, ABC-123, FABRIC-RED
         const isBinSearch =
             q &&
-            (q.toLowerCase().includes('bin') ||
-                /^\d/.test(q) || // starts with number
-                /^[a-zA-Z]+\d+/.test(q) || // letter(s) followed by number(s)
-                /^[a-zA-Z]\d+/.test(q)); // letter followed by number(s)
+            (q.toLowerCase().startsWith('bin') ||
+                /^[A-Z]{1,2}\d{1,3}:\d+$/i.test(q) || // A1:3, AB12:5 (full BIN format)
+                /^[A-Z]{1,2}\d{1,3}$/i.test(q.trim())); // A1, B12 (short BIN code, max 2 letters + max 3 digits)
 
         console.log(`[SEARCH DEBUG] Query: "${q}", isBinSearch: ${isBinSearch}`);
 
@@ -474,7 +535,7 @@
             document.getElementById('stock-pagination').style.display = invHasNext || invHasPrev ? 'flex' : 'none';
             renderInventory();
         } finally {
-            setLoader(false);
+            setTabLoading(false);
         }
     };
 
@@ -519,7 +580,8 @@
     const loadOrders = async (dir = 'next', isPagination = false) => {
         const searchQuery = document.getElementById('order-search-input').value || '';
         console.log(`[ORDERS FETCH] Direction: ${dir}, isPagination: ${isPagination}, Current page: ${ordPage}, Search: ${searchQuery}`);
-        setLoader(true);
+        setTabLoading(true);
+        showOrdersSkeleton();
         let cur = dir === 'next' ? ordEnd : ordStart;
         if (!cur) dir = 'next';
         try {
@@ -553,7 +615,7 @@
 
             renderOrders();
         } finally {
-            setLoader(false);
+            setTabLoading(false);
         }
     };
 
@@ -638,7 +700,7 @@
                             <span>${orderRowIdx}. ORDER ${o.name} ${isPartiallyShippedStatus
                         ? `<span style="background: var(--p-accent); color: white; padding: 2px 10px; border-radius: 20px; font-size: 11px; margin-left: 8px;">PARTIAL</span> <span style="font-size: 11px; color: var(--p-accent); margin-left:8px; font-weight:600;">(${fulfilledSwatchQty}/${totalSwatchQty} shipped)</span>`
                         : ''
-                    }</span>
+                    }${o.note ? `<span style="display:block; font-size:11px; color:var(--p-text-subdued); font-weight:400; margin-top:2px;">📝 ${o.note}</span>` : ''}</span>
                             <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
                                 ${shopDomain
                         ? `<button class="fb-view-order-btn" onclick="event.stopPropagation(); window.open('https://admin.shopify.com/store/${shopDomain}/orders/${o.id
@@ -865,7 +927,8 @@
     const loadHistory = async (dir = 'next', isPagination = false) => {
         const searchQuery = document.getElementById('history-search-input').value || '';
         console.log(`[HISTORY FETCH] Direction: ${dir}, isPagination: ${isPagination}, Current page: ${histPage}, Search: ${searchQuery}`);
-        setLoader(true);
+        setTabLoading(true);
+        showHistorySkeleton();
         let cur = dir === 'next' ? histEnd : histStart;
         if (!cur) dir = 'next';
         try {
@@ -910,6 +973,7 @@
                             <div style="padding:14px 15px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
                                 <div style="flex:1; min-width:0;">
                                     <div style="font-weight:700; font-size:14px; margin-bottom:4px;">${hIdx}. ORDER ${e.node.name}</div>
+                                    ${e.node.note ? `<div style="font-size:11px; color:var(--p-text-subdued); margin-bottom:4px;">📝 ${e.node.note}</div>` : ''}
                                     <div style="font-size:12px; color:var(--p-success); font-weight:600; margin-bottom:2px;">✓ FULFILLED</div>
                                     <div style="font-size:12px; color:var(--p-text-subdued);">By: <b>${fulfiller}</b></div>
                                 </div>
@@ -930,7 +994,7 @@
                     .join('');
             }
         } finally {
-            setLoader(false);
+            setTabLoading(false);
         }
     };
 
@@ -1017,7 +1081,14 @@
         )
             return;
 
-        setLoader(true);
+        // Prevent double-submission
+        if (window._fulfillInProgress) {
+            console.log('[FULFILL] Already in progress, skipping duplicate call');
+            return;
+        }
+        window._fulfillInProgress = true;
+
+        setTabLoading(true);
         try {
             const orderNode = ordersData.find((e) => e.node.id === id)?.node;
             const verifiedItemsForOrder = [];
@@ -1035,7 +1106,7 @@
 
             if (verifiedItemsForOrder.length === 0) {
                 fbToast('Please scan at least one item before fulfilling.', 'warning', 'No Verified Items');
-                setLoader(false);
+                setTabLoading(false);
                 return;
             }
 
@@ -1100,21 +1171,23 @@
                 histEnd = null;
 
                 // Refresh after a short delay to let Shopify update its index
-                setLoader(true);
+                setTabLoading(true);
                 setTimeout(async () => {
                     await Promise.all([loadOrders(), loadHistory()]);
-                    setLoader(false);
+                    setTabLoading(false);
                 }, 2500);
             } else {
                 fbToast(res.error || 'Something went wrong. Please try again.', 'error', 'Fulfillment Failed');
-                setLoader(false);
+                setTabLoading(false);
             }
         } catch (e) {
             console.error('Fulfillment Request Error:', e);
             fbToast('Request failed. Please check your connection.', 'error', 'Connection Error');
-            setLoader(false);
+            setTabLoading(false);
+        } finally {
+            window._fulfillInProgress = false;
         }
-        // We don't use finally { setLoader(false) } because loadOrders will handle it after the timeout
+        // We don't use finally { setTabLoading(false) } because loadOrders will handle it after the timeout
     };
 
     window.printTag = function (title, code, bin, img) {

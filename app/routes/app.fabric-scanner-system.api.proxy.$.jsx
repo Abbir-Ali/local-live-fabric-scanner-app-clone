@@ -311,6 +311,7 @@ export const action = async ({ request }) => {
       `#graphql
       query getFulfillmentOrders($id: ID!) {
         order(id: $id) {
+          name
           fulfillmentOrders(first: 10) {
             edges {
               node {
@@ -355,8 +356,9 @@ export const action = async ({ request }) => {
 
     console.log(`[Fulfillment] FO Data:`, JSON.stringify(foData.data, null, 2));
 
+    const orderName = foData.data?.order?.name || "";
     const fulfillmentOrders = foData.data?.order?.fulfillmentOrders?.edges || [];
-    console.log(`[Fulfillment] Found ${fulfillmentOrders.length} fulfillment orders`);
+    console.log(`[Fulfillment] Found ${fulfillmentOrders.length} fulfillment orders for ${orderName}`);
 
     // Try to find an open or scheduled fulfillment order
     const openFO = fulfillmentOrders.find(e =>
@@ -466,7 +468,7 @@ export const action = async ({ request }) => {
       status: statusLabel,
       scannedBy: staffData.name,
       staffEmail: staffData.email,
-      details: `${itemIdsMeta} ${statusLabel} via Scanner UI - ${itemDetails}. [${new Date().toLocaleString()}]`
+      details: `[ORDER:${orderName}] ${itemIdsMeta} ${statusLabel} via Scanner UI - ${itemDetails}. [${new Date().toLocaleString()}]`
     });
 
     return json({

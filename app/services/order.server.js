@@ -1,14 +1,20 @@
 export async function getFabricOrders(admin, cursor = null, direction = "next", searchQuery = "", limit = 5) {
   try {
-    const paginationArgs = direction === "prev" ? `last: ${limit}, before: "${cursor}"` : `first: ${limit}, after: ${cursor ? `"${cursor}"` : "null"}`;
-
     // Build the query string with search - match the exact format used in count queries
     let queryString = "fulfillment_status:unfulfilled AND (tag:fabric-scanner)";
+    let isNoteSearch = false;
+
     if (searchQuery && searchQuery.trim()) {
-      // Search by order number, customer name, or email
+      // Search by order number, customer name, or email via Shopify query syntax
+      // Note: Shopify API does not support `note:` filter, so note search is done server-side
       const searchTerm = searchQuery.trim();
       queryString += ` AND (name:*${searchTerm}* OR email:*${searchTerm}* OR customer.first_name:*${searchTerm}* OR customer.last_name:*${searchTerm}*)`;
+      isNoteSearch = true; // Always attempt note matching as fallback
     }
+
+    // If searching, fetch more to allow server-side note filtering
+    const fetchLimit = (searchQuery && searchQuery.trim()) ? Math.max(limit, 25) : limit;
+    const paginationArgs = direction === "prev" ? `last: ${fetchLimit}, before: "${cursor}"` : `first: ${fetchLimit}, after: ${cursor ? `"${cursor}"` : "null"}`;
 
     console.log(`[PENDING ORDERS] Query string:`, queryString);
 
@@ -21,6 +27,7 @@ export async function getFabricOrders(admin, cursor = null, direction = "next", 
               node {
                 id
                 name
+                note
                 createdAt
                 displayFinancialStatus
                 email
@@ -95,17 +102,125 @@ export async function getFabricOrders(admin, cursor = null, direction = "next", 
     console.log(`[PENDING ORDERS] Response:`, {
       edgesCount: responseJson.data?.orders?.edges?.length || 0,
       hasErrors: !!responseJson.errors,
-      errors: responseJson.errors,
-      fullResponse: JSON.stringify(responseJson, null, 2)
+      errors: responseJson.errors
     });
 
     if (responseJson.errors) {
       console.error('[PENDING ORDERS] GraphQL Errors:', responseJson.errors);
     }
 
+    let edges = responseJson.data?.orders?.edges || [];
+    let pageInfo = responseJson.data?.orders?.pageInfo;
+
+    // If standard search returned no results and we have a search query, try note-based search
+    if (edges.length === 0 && isNoteSearch && searchQuery && searchQuery.trim()) {
+      console.log(`[PENDING ORDERS] No results from standard search, trying note-based search for: "${searchQuery}"`);
+      // Fetch orders without the text search filter, then filter by note server-side
+      const noteQueryString = "fulfillment_status:unfulfilled AND (tag:fabric-scanner)";
+      const notePaginationArgs = direction === "prev" ? `last: 50, before: "${cursor}"` : `first: 50, after: ${cursor ? `"${cursor}"` : "null"}`;
+
+      const noteResponse = await admin.graphql(
+        `#graphql
+          query getFabricOrdersByNote($query: String) {
+            orders(${notePaginationArgs}, reverse: true, query: $query) {
+              pageInfo { hasNextPage hasPreviousPage startCursor endCursor }
+              edges {
+                node {
+                  id
+                  name
+                  note
+                  createdAt
+                  displayFinancialStatus
+                  email
+                  customer {
+                    id
+                    firstName
+                    lastName
+                    email
+                    phone
+                  }
+                  totalPriceSet { shopMoney { amount currencyCode } }
+                  subtotalPriceSet { shopMoney { amount } }
+                  totalTaxSet { shopMoney { amount } }
+                  shippingLine { title originalPriceSet { shopMoney { amount } } }
+                  shippingAddress { name company address1 address2 city zip provinceCode country phone }
+                  lineItems(first: 10) {
+                    edges {
+                      node {
+                        id
+                        title
+                        quantity
+                        sku
+                        unfulfilledQuantity
+                        originalUnitPriceSet { shopMoney { amount } }
+                        variant {
+                          barcode
+                          sku
+                          product {
+                            id
+                            productType
+                            featuredImage {
+                              url
+                            }
+                            binLocation: metafield(namespace: "custom", key: "bin_locations") {
+                              namespace
+                              key
+                              value
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  fulfillmentOrders(first: 10) {
+                    edges {
+                      node {
+                        id
+                        status
+                        lineItems(first: 50) {
+                          edges {
+                            node {
+                              id
+                              totalQuantity
+                              remainingQuantity
+                              lineItem {
+                                id
+                                title
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }`,
+        { variables: { query: noteQueryString } }
+      );
+      const noteResponseJson = await noteResponse.json();
+      const allEdges = noteResponseJson.data?.orders?.edges || [];
+      const searchLower = searchQuery.trim().toLowerCase();
+
+      // Filter by note content
+      edges = allEdges.filter(edge => {
+        const note = (edge.node.note || '').toLowerCase();
+        return note.includes(searchLower);
+      });
+
+      console.log(`[PENDING ORDERS] Note search: filtered ${allEdges.length} orders to ${edges.length} matching note "${searchQuery}"`);
+      // For note-based search, pagination is handled differently
+      pageInfo = edges.length > 0 ? noteResponseJson.data?.orders?.pageInfo : null;
+      edges = edges.slice(0, limit);
+    } else {
+      // Trim to requested limit if we fetched more
+      edges = edges.slice(0, limit);
+    }
+
     return {
-      edges: responseJson.data?.orders?.edges || [],
-      pageInfo: responseJson.data?.orders?.pageInfo
+      edges,
+      pageInfo
     };
   } catch (error) {
     console.error("Unfulfilled Service Error:", error);
@@ -115,14 +230,18 @@ export async function getFabricOrders(admin, cursor = null, direction = "next", 
 
 export async function getFulfilledFabricOrders(admin, cursor = null, direction = "next", searchQuery = "", limit = 5) {
   try {
-    const paginationArgs = direction === "prev" ? `last: ${limit}, before: "${cursor}"` : `first: ${limit}, after: ${cursor ? `"${cursor}"` : "null"}`;
-
     // Build the query string with search - match the exact format used in count queries
     let queryString = "fulfillment_status:fulfilled AND (tag:fabric-scanner)";
+    let isNoteSearch = false;
+
     if (searchQuery && searchQuery.trim()) {
       const searchTerm = searchQuery.trim();
       queryString += ` AND (name:*${searchTerm}* OR email:*${searchTerm}* OR customer.first_name:*${searchTerm}* OR customer.last_name:*${searchTerm}*)`;
+      isNoteSearch = true;
     }
+
+    const fetchLimit = (searchQuery && searchQuery.trim()) ? Math.max(limit, 25) : limit;
+    const paginationArgs = direction === "prev" ? `last: ${fetchLimit}, before: "${cursor}"` : `first: ${fetchLimit}, after: ${cursor ? `"${cursor}"` : "null"}`;
 
     const response = await admin.graphql(
       `#graphql
@@ -133,6 +252,7 @@ export async function getFulfilledFabricOrders(admin, cursor = null, direction =
               node {
                 id
                 name
+                note
                 updatedAt
                 displayFinancialStatus
                 email
@@ -181,9 +301,92 @@ export async function getFulfilledFabricOrders(admin, cursor = null, direction =
       { variables: { query: queryString } }
     );
     const responseJson = await response.json();
+
+    let edges = responseJson.data?.orders?.edges || [];
+    let pageInfo = responseJson.data?.orders?.pageInfo;
+
+    // If standard search returned no results and we have a search query, try note-based search
+    if (edges.length === 0 && isNoteSearch && searchQuery && searchQuery.trim()) {
+      console.log(`[FULFILLED ORDERS] No results from standard search, trying note-based search for: "${searchQuery}"`);
+      const noteQueryString = "fulfillment_status:fulfilled AND (tag:fabric-scanner)";
+      const notePaginationArgs = direction === "prev" ? `last: 50, before: "${cursor}"` : `first: 50, after: ${cursor ? `"${cursor}"` : "null"}`;
+
+      const noteResponse = await admin.graphql(
+        `#graphql
+          query getFulfilledOrdersByNote($query: String) {
+            orders(${notePaginationArgs}, reverse: true, query: $query) {
+              pageInfo { hasNextPage hasPreviousPage startCursor endCursor }
+              edges {
+                node {
+                  id
+                  name
+                  note
+                  updatedAt
+                  displayFinancialStatus
+                  email
+                  customer {
+                    id
+                    firstName
+                    lastName
+                    email
+                    phone
+                  }
+                  totalPriceSet { shopMoney { amount currencyCode } }
+                  shippingAddress {
+                    name
+                    company
+                    address1
+                    address2
+                    city
+                    zip
+                    provinceCode
+                    country
+                    phone
+                  }
+                  lineItems(first: 10) {
+                    edges {
+                      node {
+                        id
+                        title
+                        quantity
+                        sku
+                        unfulfilledQuantity
+                        variant {
+                           barcode
+                           product {
+                             featuredImage {
+                               url
+                             }
+                           }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }`,
+        { variables: { query: noteQueryString } }
+      );
+      const noteResponseJson = await noteResponse.json();
+      const allEdges = noteResponseJson.data?.orders?.edges || [];
+      const searchLower = searchQuery.trim().toLowerCase();
+
+      edges = allEdges.filter(edge => {
+        const note = (edge.node.note || '').toLowerCase();
+        return note.includes(searchLower);
+      });
+
+      console.log(`[FULFILLED ORDERS] Note search: filtered ${allEdges.length} orders to ${edges.length} matching note "${searchQuery}"`);
+      pageInfo = edges.length > 0 ? noteResponseJson.data?.orders?.pageInfo : null;
+      edges = edges.slice(0, limit);
+    } else {
+      edges = edges.slice(0, limit);
+    }
+
     return {
-      edges: responseJson.data?.orders?.edges || [],
-      pageInfo: responseJson.data?.orders?.pageInfo
+      edges,
+      pageInfo
     };
   } catch (error) {
     console.error("Fulfilled Service Error:", error);
@@ -205,15 +408,19 @@ export async function getFabricInventory(admin, cursor = null, { query = "", sor
       // For BIN searches, fetch all swatch items (no text search) - we'll filter by BIN on server
       finalQuery = 'product_type:"Swatch Item"';
     } else if (query) {
-      // Check if query looks like a SKU (alphanumeric with dashes/spaces)
+      // Check if query looks like a SKU (alphanumeric with dashes, no spaces, typically short codes)
       const escapedQuery = query.replace(/"/g, '\\"');
-      const looksLikeSKU = /^[A-Z0-9\s\-]+$/i.test(query);
+      const looksLikeSKU = /^[A-Z0-9\-]+$/i.test(query) && !query.includes(' ');
 
       if (looksLikeSKU) {
-        // Use SKU filter with wildcards for partial matching
+        // SKU fragment without spaces — use wildcards for partial matching
         finalQuery = `product_type:"Swatch Item" AND sku:*${escapedQuery}*`;
+      } else if (/^[A-Z0-9\s\-]+$/i.test(query) && query.includes(' ') && query.length < 20) {
+        // SKU with space (e.g. "DC6198-EVA 1") — try exact SKU match first
+        finalQuery = `product_type:"Swatch Item" AND sku:"${escapedQuery}"`;
       } else {
-        // General search for title and other fields
+        // General search — full-text search across title and other indexed fields
+        // Wrap in quotes for phrase matching on multi-word queries
         finalQuery = `product_type:"Swatch Item" AND "${escapedQuery}"`;
       }
     } else {
@@ -348,14 +555,18 @@ export async function getFabricInventory(admin, cursor = null, { query = "", sor
 }
 export async function getPartiallyFulfilledOrders(admin, cursor = null, direction = "next", searchQuery = "", limit = 5) {
   try {
-    const paginationArgs = direction === "prev" ? `last: ${limit}, before: "${cursor}"` : `first: ${limit}, after: ${cursor ? `"${cursor}"` : "null"}`;
-
     // Build the query string with search - match the exact format used in count queries
     let queryString = "fulfillment_status:partial AND (tag:fabric-scanner)";
+    let isNoteSearch = false;
+
     if (searchQuery && searchQuery.trim()) {
       const searchTerm = searchQuery.trim();
       queryString += ` AND (name:*${searchTerm}* OR email:*${searchTerm}* OR customer.first_name:*${searchTerm}* OR customer.last_name:*${searchTerm}*)`;
+      isNoteSearch = true;
     }
+
+    const fetchLimit = (searchQuery && searchQuery.trim()) ? Math.max(limit, 25) : limit;
+    const paginationArgs = direction === "prev" ? `last: ${fetchLimit}, before: "${cursor}"` : `first: ${fetchLimit}, after: ${cursor ? `"${cursor}"` : "null"}`;
 
     const response = await admin.graphql(
       `#graphql
@@ -366,6 +577,7 @@ export async function getPartiallyFulfilledOrders(admin, cursor = null, directio
               node {
                 id
                 name
+                note
                 createdAt
                 updatedAt
                 displayFinancialStatus
@@ -433,9 +645,111 @@ export async function getPartiallyFulfilledOrders(admin, cursor = null, directio
       { variables: { query: queryString } }
     );
     const responseJson = await response.json();
+
+    let edges = responseJson.data?.orders?.edges || [];
+    let pageInfo = responseJson.data?.orders?.pageInfo;
+
+    // If standard search returned no results and we have a search query, try note-based search
+    if (edges.length === 0 && isNoteSearch && searchQuery && searchQuery.trim()) {
+      console.log(`[PARTIAL ORDERS] No results from standard search, trying note-based search for: "${searchQuery}"`);
+      const noteQueryString = "fulfillment_status:partial AND (tag:fabric-scanner)";
+      const notePaginationArgs = direction === "prev" ? `last: 50, before: "${cursor}"` : `first: 50, after: ${cursor ? `"${cursor}"` : "null"}`;
+
+      const noteResponse = await admin.graphql(
+        `#graphql
+          query getPartialOrdersByNote($query: String) {
+            orders(${notePaginationArgs}, reverse: true, query: $query) {
+              pageInfo { hasNextPage hasPreviousPage startCursor endCursor }
+              edges {
+                node {
+                  id
+                  name
+                  note
+                  createdAt
+                  updatedAt
+                  displayFinancialStatus
+                  email
+                  customer {
+                    id
+                    firstName
+                    lastName
+                    email
+                    phone
+                  }
+                  totalPriceSet { shopMoney { amount currencyCode } }
+                  lineItems(first: 50) {
+                    edges {
+                      node {
+                        id
+                        title
+                        quantity
+                        sku
+                        unfulfilledQuantity
+                        variant {
+                          barcode
+                          sku
+                          product {
+                            id
+                            productType
+                            featuredImage {
+                              url
+                            }
+                            binLocation: metafield(namespace: "custom", key: "bin_locations") {
+                              namespace
+                              key
+                              value
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  fulfillmentOrders(first: 10) {
+                    edges {
+                      node {
+                        id
+                        status
+                        lineItems(first: 50) {
+                          edges {
+                            node {
+                              id
+                              totalQuantity
+                              remainingQuantity
+                              lineItem {
+                                id
+                                title
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }`,
+        { variables: { query: noteQueryString } }
+      );
+      const noteResponseJson = await noteResponse.json();
+      const allEdges = noteResponseJson.data?.orders?.edges || [];
+      const searchLower = searchQuery.trim().toLowerCase();
+
+      edges = allEdges.filter(edge => {
+        const note = (edge.node.note || '').toLowerCase();
+        return note.includes(searchLower);
+      });
+
+      console.log(`[PARTIAL ORDERS] Note search: filtered ${allEdges.length} orders to ${edges.length} matching note "${searchQuery}"`);
+      pageInfo = edges.length > 0 ? noteResponseJson.data?.orders?.pageInfo : null;
+      edges = edges.slice(0, limit);
+    } else {
+      edges = edges.slice(0, limit);
+    }
+
     return {
-      edges: responseJson.data?.orders?.edges || [],
-      pageInfo: responseJson.data?.orders?.pageInfo
+      edges,
+      pageInfo
     };
   } catch (error) {
     console.error("Partially Fulfilled Service Error:", error);
@@ -645,6 +959,85 @@ export async function getAssignedBinLocations(admin) {
   } catch (error) {
     console.error("[getAssignedBinLocations] Error:", error);
     return {};
+  }
+}
+
+export async function getLowStockProducts(admin, locationId) {
+  let lowStockItems = [];
+  let hasNextPage = true;
+  let cursor = null;
+
+  try {
+    while (hasNextPage) {
+      const response = await admin.graphql(
+        `#graphql
+        query getLowStockProducts($cursor: String) {
+          products(first: 100, after: $cursor, query: "product_type:'Swatch Item'") {
+            pageInfo { hasNextPage endCursor }
+            edges {
+              node {
+                id
+                title
+                binLocation: metafield(namespace: "custom", key: "bin_locations") {
+                  value
+                }
+                variants(first: 1) {
+                  edges {
+                    node {
+                      sku
+                      barcode
+                      inventoryItem {
+                        inventoryLevel(locationId: "${locationId}") {
+                          quantities(names: ["available"]) {
+                            quantity
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }`,
+        { variables: { cursor } }
+      );
+
+      const resJson = await response.json();
+      if (resJson.errors) {
+        console.error("[LOW STOCK] GraphQL Errors:", JSON.stringify(resJson.errors, null, 2));
+        break;
+      }
+
+      const products = resJson.data?.products?.edges || [];
+      products.forEach(p => {
+        const variant = p.node.variants.edges[0]?.node;
+        const available = variant?.inventoryItem?.inventoryLevel?.quantities[0]?.quantity || 0;
+
+        if (available > 0 && available < 10) {
+          lowStockItems.push({
+            id: p.node.id,
+            title: p.node.title,
+            sku: variant?.sku || "N/A",
+            barcode: variant?.barcode || "",
+            binLocation: p.node.binLocation?.value || "N/A",
+            stock: available,
+          });
+        }
+      });
+
+      hasNextPage = resJson.data?.products?.pageInfo.hasNextPage;
+      cursor = resJson.data?.products?.pageInfo.endCursor;
+    }
+
+    // Sort by stock ascending (lowest first)
+    lowStockItems.sort((a, b) => a.stock - b.stock);
+
+    console.log(`[LOW STOCK] Found ${lowStockItems.length} low stock products`);
+    return lowStockItems;
+  } catch (error) {
+    console.error("[LOW STOCK] Error:", error);
+    return [];
   }
 }
 
