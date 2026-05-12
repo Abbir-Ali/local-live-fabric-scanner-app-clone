@@ -2,7 +2,19 @@
 /**
  * Shopify Inventory Service
  * Handles individual and bulk inventory updates
+ * Updated for API version 2026-04:
+ * - @idempotent(key: "uuid") directive required on mutation fields
+ * - changeFromQuantity field required (null to opt-out)
  */
+
+function generateKey() {
+  // Use globalThis.crypto for broad compatibility (Node 20+, Vite SSR)
+  if (globalThis.crypto && globalThis.crypto.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  // Fallback: generate a simple unique key
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 15)}`;
+}
 
 /**
  * Adjusts inventory level by balanced amount (e.g. +5 or -3)
@@ -17,10 +29,12 @@ export async function adjustInventory(admin, inventoryItemId, locationId, delta)
   // First, ensure the inventory is activated at this location
   await ensureInventoryActivated(admin, inventoryItemId, locationId);
 
+  const idempotencyKey = generateKey();
+
   const response = await admin.graphql(
     `#graphql
     mutation inventoryAdjustQuantities($input: InventoryAdjustQuantitiesInput!) {
-      inventoryAdjustQuantities(input: $input) {
+      inventoryAdjustQuantities(input: $input) @idempotent(key: "${idempotencyKey}") {
         inventoryAdjustmentGroup {
           createdAt
           reason
@@ -51,12 +65,8 @@ export async function adjustInventory(admin, inventoryItemId, locationId, delta)
     }
   );
 
-  // TEMP: log raw body for Shopify Assistant
-  const rawBody = await response.clone().text();
-  console.log("RAW GRAPHQL RESPONSE (adjust):", rawBody);
-
   const resData = await response.json();
-  console.log(`[INVENTORY] Response:`, JSON.stringify(resData, null, 2));
+  console.log(`[INVENTORY] Response:`, JSON.stringify(resData?.data || resData?.errors, null, 2));
 
   if (resData.errors) {
     console.error(`[INVENTORY] GraphQL Errors:`, resData.errors);
@@ -73,44 +83,7 @@ export async function adjustInventory(admin, inventoryItemId, locationId, delta)
   const change = group?.changes?.find(c => c.name === "available");
   console.log(`[INVENTORY] Success: New available=${change?.quantityAfterChange}`);
 
-  // Follow-up check as requested by Assistant
-  try {
-    await checkInventoryState(admin, inventoryItemId);
-  } catch (e) {
-    console.error("[INVENTORY] Check failed:", e);
-  }
-
   return group;
-}
-
-/**
- * Debug helper to log the state of an inventory item across all locations
- */
-async function checkInventoryState(admin, inventoryItemId) {
-  const res = await admin.graphql(
-    `#graphql
-    query GetInventoryByItem($inventoryItemId: ID!) {
-      inventoryItem(id: $inventoryItemId) {
-        id
-        inventoryLevels(first: 20) {
-          edges {
-            node {
-              id
-              location { id name }
-              quantities(names: ["available"]) {
-                name
-                quantity
-              }
-            }
-          }
-        }
-      }
-    }`,
-    { variables: { inventoryItemId } }
-  );
-
-  const body = await res.text();
-  console.log("RAW GRAPHQL RESPONSE (check):", body);
 }
 
 /**
@@ -118,10 +91,12 @@ async function checkInventoryState(admin, inventoryItemId) {
  */
 async function ensureInventoryActivated(admin, inventoryItemId, locationId) {
   try {
+    const idempotencyKey = generateKey();
+
     const response = await admin.graphql(
       `#graphql
       mutation inventoryActivate($inventoryItemId: ID!, $locationId: ID!) {
-        inventoryActivate(inventoryItemId: $inventoryItemId, locationId: $locationId) {
+        inventoryActivate(inventoryItemId: $inventoryItemId, locationId: $locationId) @idempotent(key: "${idempotencyKey}") {
           inventoryLevel {
             id
             location { id name }
@@ -164,10 +139,12 @@ export async function setInventory(admin, inventoryItemId, locationId, quantity)
   // First, ensure the inventory is activated at this location
   await ensureInventoryActivated(admin, inventoryItemId, locationId);
 
+  const idempotencyKey = generateKey();
+
   const response = await admin.graphql(
     `#graphql
     mutation inventorySetQuantities($input: InventorySetQuantitiesInput!) {
-      inventorySetQuantities(input: $input) {
+      inventorySetQuantities(input: $input) @idempotent(key: "${idempotencyKey}") {
         inventoryAdjustmentGroup {
           createdAt
           reason
@@ -198,20 +175,14 @@ export async function setInventory(admin, inventoryItemId, locationId, quantity)
     }
   );
 
-  // TEMP: log raw body for Shopify Assistant
-  const rawBody = await response.clone().text();
-  console.log("RAW GRAPHQL RESPONSE (set):", rawBody);
-
   const resData = await response.json();
+  console.log(`[INVENTORY SET] Response:`, JSON.stringify(resData?.data || resData?.errors, null, 2));
   if (resData.errors) throw new Error(resData.errors[0].message);
 
   const userErrors = resData.data?.inventorySetQuantities?.userErrors || [];
   if (userErrors.length > 0) throw new Error(userErrors[0].message);
 
   const group = resData.data.inventorySetQuantities.inventoryAdjustmentGroup;
-  try {
-    await checkInventoryState(admin, inventoryItemId);
-  } catch (e) {}
 
   return group;
 }

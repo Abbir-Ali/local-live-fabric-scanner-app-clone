@@ -16,11 +16,14 @@ export const loader = async ({ request }) => {
   const { default: shopify } = await import("../shopify.server");
   const url = new URL(request.url);
 
-  // Ensure webhooks are registered for this shop
-  try {
-    await shopify.registerWebhooks({ session });
-  } catch (e) {
-    console.error("Webhook Registration Error:", e);
+  // Only register webhooks on initial page load, not on every auto-refresh or pagination
+  const isInitialLoad = !url.searchParams.has("pendingCursor") && !url.searchParams.has("partialCursor") && !url.searchParams.has("fulfilledCursor") && !url.searchParams.has("pendingPage") && !url.searchParams.has("partialPage") && !url.searchParams.has("fulfilledPage");
+  if (isInitialLoad) {
+    try {
+      await shopify.registerWebhooks({ session });
+    } catch (e) {
+      console.error("Webhook Registration Error:", e);
+    }
   }
 
   const pendingCursor = url.searchParams.get("pendingCursor");
