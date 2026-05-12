@@ -90,8 +90,20 @@ export default function Index() {
   const revalidator = useRevalidator();
   const navigation = useNavigation();
 
-  // Loading states
-  const isLoading = navigation.state === "loading";
+  // Per-section loading — determine which section triggered the navigation
+  const isNavigating = navigation.state === "loading";
+  const nextParams = new URLSearchParams(navigation.location?.search || "");
+  const isPendingLoading = isNavigating && (
+    nextParams.has("pendingCursor") || nextParams.has("pendingDir") || nextParams.has("pendingSearch") || nextParams.has("pendingLimit")
+  );
+  const isPartialLoading = isNavigating && (
+    nextParams.has("partialCursor") || nextParams.has("partialDir") || nextParams.has("partialSearch") || nextParams.has("partialLimit")
+  );
+  const isFulfilledLoading = isNavigating && (
+    nextParams.has("fulfilledCursor") || nextParams.has("fulfilledDir") || nextParams.has("fulfilledSearch") || nextParams.has("fulfilledLimit")
+  );
+  // If none of the specific sections triggered it (e.g. auto-refresh), don't show loader overlay
+  const isLoading = isNavigating;
 
   // Debug logging
   console.log('[DASHBOARD] Loaded data:', {
@@ -142,7 +154,7 @@ export default function Index() {
         }
         params.delete("pendingCursor");
         params.delete("pendingPage");
-        navigate(`?${params.toString()}`, { replace: true });
+        navigate(`?${params.toString()}`, { replace: true, preventScrollReset: true });
       }
     }, 1200);
     return () => clearTimeout(timer);
@@ -159,7 +171,7 @@ export default function Index() {
         }
         params.delete("partialCursor");
         params.delete("partialPage");
-        navigate(`?${params.toString()}`, { replace: true });
+        navigate(`?${params.toString()}`, { replace: true, preventScrollReset: true });
       }
     }, 1200);
     return () => clearTimeout(timer);
@@ -176,7 +188,7 @@ export default function Index() {
         }
         params.delete("fulfilledCursor");
         params.delete("fulfilledPage");
-        navigate(`?${params.toString()}`, { replace: true });
+        navigate(`?${params.toString()}`, { replace: true, preventScrollReset: true });
       }
     }, 1200);
     return () => clearTimeout(timer);
@@ -189,7 +201,7 @@ export default function Index() {
     params.set("pendingLimit", value);
     params.delete("pendingCursor");
     params.delete("pendingPage");
-    navigate(`?${params.toString()}`);
+    navigate(`?${params.toString()}`, { preventScrollReset: true });
   };
 
   const handlePartialPageSizeChange = (value) => {
@@ -198,7 +210,7 @@ export default function Index() {
     params.set("partialLimit", value);
     params.delete("partialCursor");
     params.delete("partialPage");
-    navigate(`?${params.toString()}`);
+    navigate(`?${params.toString()}`, { preventScrollReset: true });
   };
 
   const handleFulfilledPageSizeChange = (value) => {
@@ -207,7 +219,7 @@ export default function Index() {
     params.set("fulfilledLimit", value);
     params.delete("fulfilledCursor");
     params.delete("fulfilledPage");
-    navigate(`?${params.toString()}`);
+    navigate(`?${params.toString()}`, { preventScrollReset: true });
   };
 
   const handlePendingNext = () => {
@@ -217,7 +229,7 @@ export default function Index() {
       newParams.set("pendingCursor", pendingPageInfo.endCursor);
       newParams.set("pendingPage", (currentPage + 1).toString());
       newParams.set("pendingDir", "next");
-      navigate(`?${newParams.toString()}`);
+      navigate(`?${newParams.toString()}`, { preventScrollReset: true });
     }
   };
 
@@ -228,13 +240,13 @@ export default function Index() {
       newParams.set("pendingCursor", pendingPageInfo.startCursor);
       newParams.set("pendingPage", (currentPage - 1).toString());
       newParams.set("pendingDir", "prev");
-      navigate(`?${newParams.toString()}`);
+      navigate(`?${newParams.toString()}`, { preventScrollReset: true });
     } else {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("pendingCursor");
       newParams.delete("pendingPage");
       newParams.delete("pendingDir");
-      navigate(`?${newParams.toString()}`);
+      navigate(`?${newParams.toString()}`, { preventScrollReset: true });
     }
   };
 
@@ -245,7 +257,7 @@ export default function Index() {
       newParams.set("fulfilledCursor", fulfilledPageInfo.endCursor);
       newParams.set("fulfilledPage", (currentPage + 1).toString());
       newParams.set("fulfilledDir", "next");
-      navigate(`?${newParams.toString()}`);
+      navigate(`?${newParams.toString()}`, { preventScrollReset: true });
     }
   };
 
@@ -256,13 +268,13 @@ export default function Index() {
       newParams.set("fulfilledCursor", fulfilledPageInfo.startCursor);
       newParams.set("fulfilledPage", (currentPage - 1).toString());
       newParams.set("fulfilledDir", "prev");
-      navigate(`?${newParams.toString()}`);
+      navigate(`?${newParams.toString()}`, { preventScrollReset: true });
     } else {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("fulfilledCursor");
       newParams.delete("fulfilledPage");
       newParams.delete("fulfilledDir");
-      navigate(`?${newParams.toString()}`);
+      navigate(`?${newParams.toString()}`, { preventScrollReset: true });
     }
   };
 
@@ -273,7 +285,7 @@ export default function Index() {
       newParams.set("partialCursor", partialPageInfo.endCursor);
       newParams.set("partialPage", (currentPage + 1).toString());
       newParams.set("partialDir", "next");
-      navigate(`?${newParams.toString()}`);
+      navigate(`?${newParams.toString()}`, { preventScrollReset: true });
     }
   };
 
@@ -284,13 +296,13 @@ export default function Index() {
       newParams.set("partialCursor", partialPageInfo.startCursor);
       newParams.set("partialPage", (currentPage - 1).toString());
       newParams.set("partialDir", "prev");
-      navigate(`?${newParams.toString()}`);
+      navigate(`?${newParams.toString()}`, { preventScrollReset: true });
     } else {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("partialCursor");
       newParams.delete("partialPage");
       newParams.delete("partialDir");
-      navigate(`?${newParams.toString()}`);
+      navigate(`?${newParams.toString()}`, { preventScrollReset: true });
     }
   };
 
@@ -366,7 +378,7 @@ export default function Index() {
                 </InlineStack>
               </InlineStack>
               <div style={{ position: 'relative', minHeight: '200px' }}>
-                {isLoading && (
+                {isPendingLoading && (
                   <div style={{
                     position: 'absolute',
                     top: 0,
@@ -449,7 +461,7 @@ export default function Index() {
                 </InlineStack>
               </InlineStack>
               <div style={{ position: 'relative', minHeight: '200px' }}>
-                {isLoading && (
+                {isPartialLoading && (
                   <div style={{
                     position: 'absolute',
                     top: 0,
@@ -538,7 +550,7 @@ export default function Index() {
                 </InlineStack>
               </InlineStack>
               <div style={{ position: 'relative', minHeight: '200px' }}>
-                {isLoading && (
+                {isFulfilledLoading && (
                   <div style={{
                     position: 'absolute',
                     top: 0,
