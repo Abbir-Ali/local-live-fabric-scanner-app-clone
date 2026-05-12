@@ -552,34 +552,30 @@
                 )}&isBinSearch=${isBinSearch}&limit=${invPageSize}&_t=${Date.now()}`
             );
             const j = await r.json();
-            inventoryData = j.data.edges;
+            inventoryData = j.data?.edges || [];
             console.log(
                 `[STOCK FETCH] Received ${inventoryData.length} items${isBinSearch ? ' (BIN search applied)' : ''}`
             );
 
-            // Debug: Log first item metafields if BIN search
-            if (isBinSearch && inventoryData.length > 0) {
-                console.log(
-                    `[DEBUG BIN SEARCH] First item metafields:`,
-                    JSON.stringify(inventoryData[0].node.metafields?.edges || [], null, 2)
-                );
-            }
-
-            const pi = j.data.pageInfo;
+            const pi = j.data?.pageInfo || {};
             // Only update page counter when explicitly paginating, not on tab switches
             if (isPagination && cur) {
                 if (dir === 'next') invPage++;
                 else if (invPage > 1) invPage--;
                 console.log(`[STOCK FETCH] Page updated to: ${invPage}`);
             }
-            invHasNext = pi.hasNextPage;
-            invHasPrev = pi.hasPreviousPage;
-            invStart = pi.startCursor;
-            invEnd = pi.endCursor;
+            invHasNext = pi.hasNextPage || false;
+            invHasPrev = pi.hasPreviousPage || false;
+            invStart = pi.startCursor || null;
+            invEnd = pi.endCursor || null;
             document.getElementById('prev-inventory').disabled = !invHasPrev;
             document.getElementById('next-inventory').disabled = !invHasNext;
             document.getElementById('page-label-inventory').innerText = `Page ${invPage}`;
             document.getElementById('stock-pagination').style.display = invHasNext || invHasPrev ? 'flex' : 'none';
+            renderInventory();
+        } catch (err) {
+            console.error('[STOCK FETCH] Error:', err);
+            inventoryData = [];
             renderInventory();
         } finally {
             setTabLoading(false);
@@ -590,11 +586,13 @@
     document.getElementById('next-inventory').onclick = () => loadInventory('next', true);
 
     function renderInventory() {
+        const q = document.getElementById('inv-search-input').value || '';
         console.log(`[STOCK RENDER] Rendering ${inventoryData.length} items for page ${invPage}`);
         const container = document.getElementById('inventory-list');
         if (inventoryData.length === 0) {
-            container.innerHTML =
-                '<div style="text-align:center; padding:40px; color:var(--p-text-subdued)">No matching inventory found.</div>';
+            container.innerHTML = q
+                ? `<div style="text-align:center; padding:40px; color:var(--p-text-subdued)">No results found for "<b>${q}</b>". Try a different search term.</div>`
+                : '<div style="text-align:center; padding:40px; color:var(--p-text-subdued)">No matching inventory found.</div>';
             return;
         }
         container.innerHTML = inventoryData
@@ -636,19 +634,19 @@
                 `${PROXY_URL}?type=orders&direction=${dir}${cur ? `&cursor=${cur}` : ''}&search=${encodeURIComponent(searchQuery)}&limit=${ordPageSize}&_t=${Date.now()}`
             );
             const j = await r.json();
-            ordersData = j.data.edges;
-            shopDomain = j.data.shopDomain;
+            ordersData = j.data?.edges || [];
+            shopDomain = j.data?.shopDomain || shopDomain;
             console.log(`[ORDERS FETCH] Received ${ordersData.length} items, shopDomain: ${shopDomain}`);
-            const pi = j.data.pageInfo;
+            const pi = j.data?.pageInfo || {};
             if (isPagination && cur) {
                 if (dir === 'next') ordPage++;
                 else if (ordPage > 1) ordPage--;
                 console.log(`[ORDERS FETCH] Page updated to: ${ordPage}`);
             }
-            ordHasNext = pi.hasNextPage;
-            ordHasPrev = pi.hasPreviousPage;
-            ordStart = pi.startCursor;
-            ordEnd = pi.endCursor;
+            ordHasNext = pi.hasNextPage || false;
+            ordHasPrev = pi.hasPreviousPage || false;
+            ordStart = pi.startCursor || null;
+            ordEnd = pi.endCursor || null;
             document.getElementById('prev-orders').disabled = !ordHasPrev;
             document.getElementById('next-orders').disabled = !ordHasNext;
             document.getElementById('page-label-orders').innerText = `Page ${ordPage}`;
@@ -660,6 +658,10 @@
                 lastOpenedOrderId = null; // Reset if order is no longer on this page
             }
 
+            renderOrders();
+        } catch (err) {
+            console.error('[ORDERS FETCH] Error:', err);
+            ordersData = [];
             renderOrders();
         } finally {
             setTabLoading(false);
@@ -983,19 +985,19 @@
                 `${PROXY_URL}?type=fulfilled&direction=${dir}${cur ? `&cursor=${cur}` : ''}&search=${encodeURIComponent(searchQuery)}&limit=${histPageSize}&_t=${Date.now()}`
             );
             const j = await r.json();
-            historyData = j.data.edges;
-            if (j.data.shopDomain) shopDomain = j.data.shopDomain;
+            historyData = j.data?.edges || [];
+            if (j.data?.shopDomain) shopDomain = j.data.shopDomain;
             console.log(`[HISTORY FETCH] Received ${historyData.length} items, shopDomain: ${shopDomain}`);
-            const pi = j.data.pageInfo;
+            const pi = j.data?.pageInfo || {};
             if (isPagination && cur) {
                 if (dir === 'next') histPage++;
                 else if (histPage > 1) histPage--;
                 console.log(`[HISTORY FETCH] Page updated to: ${histPage}`);
             }
-            histHasNext = pi.hasNextPage;
-            histHasPrev = pi.hasPreviousPage;
-            histStart = pi.startCursor;
-            histEnd = pi.endCursor;
+            histHasNext = pi.hasNextPage || false;
+            histHasPrev = pi.hasPreviousPage || false;
+            histStart = pi.startCursor || null;
+            histEnd = pi.endCursor || null;
             document.getElementById('prev-history').disabled = !histHasPrev;
             document.getElementById('next-history').disabled = !histHasNext;
             document.getElementById('page-label-history').innerText = `Page ${histPage}`;
@@ -1040,6 +1042,14 @@
                     })
                     .join('');
             }
+        } catch (err) {
+            console.error('[HISTORY FETCH] Error:', err);
+            historyData = [];
+            const historyContainer = document.getElementById('history-container');
+            const sq = document.getElementById('history-search-input').value || '';
+            historyContainer.innerHTML = sq
+                ? `<div style="text-align:center; padding:40px; color:var(--p-text-subdued)">No results found for "<b>${sq}</b>".</div>`
+                : '<div style="text-align:center; padding:40px; color:var(--p-text-subdued)">No fulfillment history found.</div>';
         } finally {
             setTabLoading(false);
         }
