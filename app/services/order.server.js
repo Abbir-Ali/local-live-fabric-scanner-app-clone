@@ -1014,7 +1014,7 @@ export async function getLowStockProducts(admin, locationId) {
         const variant = p.node.variants.edges[0]?.node;
         const available = variant?.inventoryItem?.inventoryLevel?.quantities[0]?.quantity || 0;
 
-        if (available > 0 && available < 10) {
+        if (available > 0 && available <= 10) {
           lowStockItems.push({
             id: p.node.id,
             title: p.node.title,
@@ -1088,7 +1088,7 @@ export async function getGlobalInventoryStats(admin, locationId) {
 
         stats.total++;
         if (available <= 0) stats.outOfStock++;
-        else if (available < 10) stats.lowStock++;
+        else if (available <= 10) stats.lowStock++;
       });
 
       hasNextPage = resJson.data?.products?.pageInfo.hasNextPage;

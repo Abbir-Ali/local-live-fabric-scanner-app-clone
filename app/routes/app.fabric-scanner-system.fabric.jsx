@@ -1081,7 +1081,7 @@ export default function FabricInventory() {
                 loading={false}
                 filters={[]}
                 canCreateNewView={false}
-                queryPlaceholder="Search by SKU, title, or bin location..."
+                queryPlaceholder="Search by SKU, Title, or Bin..."
               />
 
               <div style={{ opacity: isLoading ? 0.5 : 1, transition: 'opacity 0.2s ease' }}>
