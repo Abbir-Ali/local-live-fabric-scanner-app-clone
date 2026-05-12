@@ -5,7 +5,7 @@ import { getFabricOrders, getFulfilledFabricOrders, getPartiallyFulfilledOrders,
 import BarcodeImage from "../components/BarcodeImage";
 
 // Components
-import { Page, Layout, Card, BlockStack, Text, InlineGrid, Collapsible, Button, Badge, InlineStack, Thumbnail, Pagination, Icon, TextField, Select } from "@shopify/polaris";
+import { Page, Layout, Card, BlockStack, Text, InlineGrid, Collapsible, Button, Badge, InlineStack, Thumbnail, Icon, TextField, Select } from "@shopify/polaris";
 import { ChevronDownIcon, ChevronUpIcon, PersonIcon, ViewIcon } from "@shopify/polaris-icons";
 import { useState } from "react";
 
@@ -420,13 +420,15 @@ export default function Index() {
                     {swatchOrders.map(({ node: order }, idx) => (
                       <OrderRow key={order.id} order={order} status="pending" index={(parseInt(searchParams.get("pendingPage") || "1") - 1) * parseInt(pendingPageSize) + idx + 1} shopDomain={shopDomain} />
                     ))}
-                    <Pagination
-                      hasPrevious={pendingPageInfo?.hasPreviousPage && !isLoading}
-                      onPrevious={handlePendingPrev}
-                      hasNext={pendingPageInfo?.hasNextPage && !isLoading}
-                      onNext={handlePendingNext}
-                      accessibilityLabel="Pending orders pagination"
-                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderTop: '1px solid #E3DDD6', background: '#FAFAFA', borderRadius: '0 0 8px 8px', marginTop: '8px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '600', color: '#999', letterSpacing: '0.3px' }}>
+                        PAGE {searchParams.get("pendingPage") || "1"} · {pendingPageSize} PER PAGE
+                      </span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button onClick={handlePendingPrev} disabled={!pendingPageInfo?.hasPreviousPage || isPendingLoading} style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E3DDD6', background: '#FFFFFF', cursor: !pendingPageInfo?.hasPreviousPage ? 'not-allowed' : 'pointer', opacity: !pendingPageInfo?.hasPreviousPage ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#333' }}>‹</button>
+                        <button onClick={handlePendingNext} disabled={!pendingPageInfo?.hasNextPage || isPendingLoading} style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E3DDD6', background: '#FFFFFF', cursor: !pendingPageInfo?.hasNextPage ? 'not-allowed' : 'pointer', opacity: !pendingPageInfo?.hasNextPage ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#333' }}>›</button>
+                      </div>
+                    </div>
                   </BlockStack>
                 )}
               </div>
@@ -509,13 +511,15 @@ export default function Index() {
                         shopDomain={shopDomain}
                       />
                     ))}
-                    <Pagination
-                      hasPrevious={partialPageInfo?.hasPreviousPage && !isLoading}
-                      onPrevious={handlePartialPrev}
-                      hasNext={partialPageInfo?.hasNextPage && !isLoading}
-                      onNext={handlePartialNext}
-                      accessibilityLabel="Partial orders pagination"
-                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderTop: '1px solid #E3DDD6', background: '#FAFAFA', borderRadius: '0 0 8px 8px', marginTop: '8px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '600', color: '#999', letterSpacing: '0.3px' }}>
+                        PAGE {searchParams.get("partialPage") || "1"} · {partialPageSize} PER PAGE
+                      </span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button onClick={handlePartialPrev} disabled={!partialPageInfo?.hasPreviousPage || isPartialLoading} style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E3DDD6', background: '#FFFFFF', cursor: !partialPageInfo?.hasPreviousPage ? 'not-allowed' : 'pointer', opacity: !partialPageInfo?.hasPreviousPage ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#333' }}>‹</button>
+                        <button onClick={handlePartialNext} disabled={!partialPageInfo?.hasNextPage || isPartialLoading} style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E3DDD6', background: '#FFFFFF', cursor: !partialPageInfo?.hasNextPage ? 'not-allowed' : 'pointer', opacity: !partialPageInfo?.hasNextPage ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#333' }}>›</button>
+                      </div>
+                    </div>
                   </BlockStack>
                 )}
               </div>
@@ -599,13 +603,15 @@ export default function Index() {
                         shopDomain={shopDomain}
                       />
                     ))}
-                    <Pagination
-                      hasPrevious={fulfilledPageInfo?.hasPreviousPage && !isLoading}
-                      onPrevious={handleFulfilledPrev}
-                      hasNext={fulfilledPageInfo?.hasNextPage && !isLoading}
-                      onNext={handleFulfilledNext}
-                      accessibilityLabel="Fulfilled orders pagination"
-                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderTop: '1px solid #E3DDD6', background: '#FAFAFA', borderRadius: '0 0 8px 8px', marginTop: '8px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '600', color: '#999', letterSpacing: '0.3px' }}>
+                        PAGE {searchParams.get("fulfilledPage") || "1"} · {fulfilledPageSize} PER PAGE
+                      </span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button onClick={handleFulfilledPrev} disabled={!fulfilledPageInfo?.hasPreviousPage || isFulfilledLoading} style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E3DDD6', background: '#FFFFFF', cursor: !fulfilledPageInfo?.hasPreviousPage ? 'not-allowed' : 'pointer', opacity: !fulfilledPageInfo?.hasPreviousPage ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#333' }}>‹</button>
+                        <button onClick={handleFulfilledNext} disabled={!fulfilledPageInfo?.hasNextPage || isFulfilledLoading} style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E3DDD6', background: '#FFFFFF', cursor: !fulfilledPageInfo?.hasNextPage ? 'not-allowed' : 'pointer', opacity: !fulfilledPageInfo?.hasNextPage ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#333' }}>›</button>
+                      </div>
+                    </div>
                   </BlockStack>
                 )}
               </div>

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { authenticate } from "../shopify.server";
 import {
   Page, Layout, Card, IndexTable, Button, BlockStack, Badge,
-  InlineStack, Thumbnail, Text, Pagination, Box, IndexFilters, TextField, Select, useSetIndexFiltersMode,
+  InlineStack, Thumbnail, Text, Box, IndexFilters, TextField, Select, useSetIndexFiltersMode,
   Popover, Banner, Grid, Modal, Tabs, Icon
 } from "@shopify/polaris";
 import { ArrowRightIcon, EditIcon, ExportIcon, SearchIcon, PlusIcon, DeleteIcon, LocationIcon } from "@shopify/polaris-icons";
@@ -1105,8 +1105,11 @@ export default function FabricInventory() {
               </div>
 
               <Box padding="400" borderTopWidth="025" borderColor="border">
-                <InlineStack align="space-between" blockAlign="center">
-                  <div style={{ width: '140px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '600', color: '#999', letterSpacing: '0.3px' }}>
+                    PAGE {page} · {pageSize} PER PAGE
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <Select
                       label=""
                       labelHidden
@@ -1116,14 +1119,11 @@ export default function FabricInventory() {
                       disabled={isLoading}
                     />
                   </div>
-                  <Pagination
-                    hasPrevious={pageInfo?.hasPreviousPage && !isLoading}
-                    onPrevious={() => handlePagination(pageInfo.startCursor, "prev")}
-                    hasNext={pageInfo?.hasNextPage && !isLoading}
-                    onNext={() => handlePagination(pageInfo.endCursor, "next")}
-                  />
-                  <div style={{ width: '140px' }} />
-                </InlineStack>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button onClick={() => handlePagination(pageInfo.startCursor, "prev")} disabled={!pageInfo?.hasPreviousPage || isLoading} style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E3DDD6', background: '#FFFFFF', cursor: !pageInfo?.hasPreviousPage ? 'not-allowed' : 'pointer', opacity: !pageInfo?.hasPreviousPage ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#333' }}>‹</button>
+                    <button onClick={() => handlePagination(pageInfo.endCursor, "next")} disabled={!pageInfo?.hasNextPage || isLoading} style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #E3DDD6', background: '#FFFFFF', cursor: !pageInfo?.hasNextPage ? 'not-allowed' : 'pointer', opacity: !pageInfo?.hasNextPage ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#333' }}>›</button>
+                  </div>
+                </div>
               </Box>
             </Box>
           </Card>
