@@ -66,16 +66,19 @@
         invEnd = null;
     let invSort = 'CREATED_AT',
         invReverse = true;
+    let invPageSize = 5;
     let ordPage = 1,
         ordHasPrev = false,
         ordHasNext = false,
         ordStart = null,
         ordEnd = null;
+    let ordPageSize = 5;
     let histPage = 1,
         histHasPrev = false,
         histHasNext = false,
         histStart = null,
         histEnd = null;
+    let histPageSize = 5;
     let lastOpenedOrderId = null; // Track which order was last opened
 
     const setLoader = (show) => (document.getElementById('fb-loader').style.display = show ? 'flex' : 'none');
@@ -266,6 +269,9 @@
         if (savedTab === 'stock-pane') loadInventory();
         else if (savedTab === 'orders-pane') loadOrders();
         else if (savedTab === 'history-pane') loadHistory();
+
+        // Always load order counts on app start so they're ready
+        loadOrderCounts();
     };
 
     const refreshSettings = async () => {
@@ -384,6 +390,7 @@
                     loadInventory();
                 }
             } else if (target === 'orders-pane') {
+                loadOrderCounts(); // Always refresh counts when switching to orders tab
                 if (ordersData.length > 0) {
                     console.log(`[ORDERS] Using cached data (${ordersData.length} items, page ${ordPage})`);
                     renderOrders();
@@ -396,7 +403,7 @@
                     console.log(`[HISTORY] Using cached data (${historyData.length} items, page ${histPage})`);
                     document.getElementById('history-container').innerHTML = historyData
                         .map((e, idx) => {
-                            const hIdx = (histPage - 1) * 5 + idx + 1;
+                            const hIdx = (histPage - 1) * histPageSize + idx + 1;
                             const fulfiller = e.log ? e.log.scannedBy || e.log.staffEmail : 'Unknown';
                             const orderId = e.node.id.split('/').pop();
                             const hsa = e.node.shippingAddress || {};
@@ -443,6 +450,14 @@
         loadInventory();
     };
 
+    document.getElementById('inv-page-size').onchange = (e) => {
+        invPageSize = parseInt(e.target.value);
+        invPage = 1;
+        invStart = null;
+        invEnd = null;
+        loadInventory();
+    };
+
     let searchTimeout;
     document.getElementById('inv-search-input').oninput = (e) => {
         clearTimeout(searchTimeout);
@@ -476,6 +491,38 @@
         }, 500);
     };
 
+    // Page size change handlers
+    document.getElementById('order-page-size').onchange = (e) => {
+        ordPageSize = parseInt(e.target.value);
+        ordPage = 1;
+        ordStart = null;
+        ordEnd = null;
+        loadOrders();
+    };
+
+    document.getElementById('history-page-size').onchange = (e) => {
+        histPageSize = parseInt(e.target.value);
+        histPage = 1;
+        histStart = null;
+        histEnd = null;
+        loadHistory();
+    };
+
+    // Fetch and display order counts
+    const loadOrderCounts = async () => {
+        try {
+            const r = await fetch(`${PROXY_URL}?type=counts&_t=${Date.now()}`);
+            const j = await r.json();
+            if (j.data) {
+                document.getElementById('count-pending').textContent = j.data.pending || 0;
+                document.getElementById('count-partial').textContent = j.data.partial || 0;
+                document.getElementById('count-fulfilled').textContent = j.data.fulfilled || 0;
+            }
+        } catch (e) {
+            console.error('[COUNTS] Failed to load order counts:', e);
+        }
+    };
+
     const loadInventory = async (dir = 'next', isPagination = false) => {
         const q = document.getElementById('inv-search-input').value || '';
         console.log(
@@ -502,7 +549,7 @@
                 `${PROXY_URL}?type=inventory&direction=${dir}${cur ? `&cursor=${cur}` : ''
                 }&sortKey=${invSort}&reverse=${invReverse}&query=${encodeURIComponent(
                     q
-                )}&isBinSearch=${isBinSearch}&_t=${Date.now()}`
+                )}&isBinSearch=${isBinSearch}&limit=${invPageSize}&_t=${Date.now()}`
             );
             const j = await r.json();
             inventoryData = j.data.edges;
@@ -555,7 +602,7 @@
                 const p = e.node,
                     v = p.variants.edges[0].node;
                 const bin = getBin(p);
-                const displayNumber = (invPage - 1) * 5 + idx + 1;
+                const displayNumber = (invPage - 1) * invPageSize + idx + 1;
                 return `<div class="fb-stock-card">
                     <div class="fb-stock-body">
                         <img src="${p.featuredImage?.url || ''}" class="fb-stock-img">
@@ -579,14 +626,14 @@
 
     const loadOrders = async (dir = 'next', isPagination = false) => {
         const searchQuery = document.getElementById('order-search-input').value || '';
-        console.log(`[ORDERS FETCH] Direction: ${dir}, isPagination: ${isPagination}, Current page: ${ordPage}, Search: ${searchQuery}`);
+        console.log(`[ORDERS FETCH] Direction: ${dir}, isPagination: ${isPagination}, Current page: ${ordPage}, Search: ${searchQuery}, Limit: ${ordPageSize}`);
         setTabLoading(true);
         showOrdersSkeleton();
         let cur = dir === 'next' ? ordEnd : ordStart;
         if (!cur) dir = 'next';
         try {
             const r = await fetch(
-                `${PROXY_URL}?type=orders&direction=${dir}${cur ? `&cursor=${cur}` : ''}&search=${encodeURIComponent(searchQuery)}&_t=${Date.now()}`
+                `${PROXY_URL}?type=orders&direction=${dir}${cur ? `&cursor=${cur}` : ''}&search=${encodeURIComponent(searchQuery)}&limit=${ordPageSize}&_t=${Date.now()}`
             );
             const j = await r.json();
             ordersData = j.data.edges;
@@ -662,7 +709,7 @@
 
                 if (fabrics.length === 0) return '';
                 const allVerified = fabrics.every((x) => verifiedItems.has(x.node.id));
-                const orderRowIdx = (ordPage - 1) * 5 + idx + 1;
+                const orderRowIdx = (ordPage - 1) * ordPageSize + idx + 1;
 
                 // Check if order is partially fulfilled
                 const isPartiallyFulfilled = fulfilledSwatchQty > 0 && fulfilledSwatchQty < totalSwatchQty;
@@ -738,7 +785,7 @@
                             ${allVerified
                         ? `<button class="fb-btn fb-btn-success" style="flex:1; min-width:0; height:40px; font-size:12px; font-weight:600; padding:0 10px; white-space:nowrap; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; gap:5px;" onclick="fulfillNow('${o.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg><span style="overflow:hidden; text-overflow:ellipsis;">Fulfill Order</span></button>`
                         : verifiedItems.size > 0 && fabrics.some((fx) => verifiedItems.has(fx.node.id))
-                            ? `<button class="fb-btn" style="flex:1; min-width:0; height:40px; font-size:12px; font-weight:600; background:#485b59; color:#fff; padding:0 10px; white-space:nowrap; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; gap:5px;" onclick="fulfillNow('${o.id}', true)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M5 12h14M12 5l7 7-7 7"/></svg><span style="overflow:hidden; text-overflow:ellipsis;">Ship Verified (${fabrics.filter((fx) => verifiedItems.has(fx.node.id)).length})</span></button>`
+                            ? `<button class="fb-btn" style="flex:1; min-width:0; height:40px; font-size:12px; font-weight:600; background:#0A7C6E; color:#fff; padding:0 10px; white-space:nowrap; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; gap:5px;" onclick="fulfillNow('${o.id}', true)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M5 12h14M12 5l7 7-7 7"/></svg><span style="overflow:hidden; text-overflow:ellipsis;">Ship Verified (${fabrics.filter((fx) => verifiedItems.has(fx.node.id)).length})</span></button>`
                             : ''
                     }
                         </div>
@@ -798,7 +845,7 @@
                 <!-- SCAN Button positioned at bottom right -->
                 ${!isFulfilled && !done
                 ? `<div style="position:absolute; bottom:12px; right:12px;">
-                        <button class="fb-btn" style="padding: 6px 12px; font-size: 11px; font-weight:600; background:#4a4a4a; color:#fff; white-space:nowrap; ${currentUser.enableScanButton === false ? 'pointer-events: none; opacity: 0.6;' : ''
+                        <button class="fb-btn" style="padding: 6px 12px; font-size: 11px; font-weight:600; background:#25343F; color:#fff; white-space:nowrap; ${currentUser.enableScanButton === false ? 'pointer-events: none; opacity: 0.6;' : ''
                 }" ${currentUser.enableScanButton === false ? 'disabled' : ''} onclick="startScan('${fx.node.id
                 }', '${fx.node.variant?.barcode}', '${fx.node.title.replace(
                     /'/g,
@@ -933,7 +980,7 @@
         if (!cur) dir = 'next';
         try {
             const r = await fetch(
-                `${PROXY_URL}?type=fulfilled&direction=${dir}${cur ? `&cursor=${cur}` : ''}&search=${encodeURIComponent(searchQuery)}&_t=${Date.now()}`
+                `${PROXY_URL}?type=fulfilled&direction=${dir}${cur ? `&cursor=${cur}` : ''}&search=${encodeURIComponent(searchQuery)}&limit=${histPageSize}&_t=${Date.now()}`
             );
             const j = await r.json();
             historyData = j.data.edges;
@@ -963,7 +1010,7 @@
             } else {
                 historyContainer.innerHTML = historyData
                     .map((e, idx) => {
-                        const hIdx = (histPage - 1) * 5 + idx + 1;
+                        const hIdx = (histPage - 1) * histPageSize + idx + 1;
                         const fulfiller = e.log ? e.log.scannedBy || e.log.staffEmail : 'Unknown';
                         const orderId = e.node.id.split('/').pop();
                         const hsa = e.node.shippingAddress || {};
@@ -1162,6 +1209,32 @@
 
                 saveState();
                 renderOrders(); // Instant UI Update
+
+                // Optimistic count update — adjust counts immediately without waiting for API
+                const pendingEl = document.getElementById('count-pending');
+                const partialEl = document.getElementById('count-partial');
+                const fulfilledEl = document.getElementById('count-fulfilled');
+                if (res.partiallyFulfilled) {
+                    // Order moved from pending to partial
+                    const currentPending = parseInt(pendingEl.textContent) || 0;
+                    const currentPartial = parseInt(partialEl.textContent) || 0;
+                    if (currentPending > 0) pendingEl.textContent = currentPending - 1;
+                    partialEl.textContent = currentPartial + 1;
+                } else {
+                    // Order fully fulfilled — moved from pending (or partial) to fulfilled
+                    const currentPending = parseInt(pendingEl.textContent) || 0;
+                    const currentPartial = parseInt(partialEl.textContent) || 0;
+                    const currentFulfilled = parseInt(fulfilledEl.textContent) || 0;
+                    // Check if it was a partial order being fully fulfilled
+                    const wasPartial = ordersData.find(e => e.node.id === id) === undefined;
+                    if (wasPartial && currentPartial > 0) {
+                        partialEl.textContent = currentPartial - 1;
+                    } else if (currentPending > 0) {
+                        pendingEl.textContent = currentPending - 1;
+                    }
+                    fulfilledEl.textContent = currentFulfilled + 1;
+                }
+
                 // Reset pagination to show newest data
                 ordPage = 1;
                 ordStart = null;
@@ -1173,8 +1246,10 @@
                 // Refresh after a short delay to let Shopify update its index
                 setTabLoading(true);
                 setTimeout(async () => {
-                    await Promise.all([loadOrders(), loadHistory()]);
+                    await Promise.all([loadOrders(), loadHistory(), loadOrderCounts()]);
                     setTabLoading(false);
+                    // Second refresh after longer delay to ensure Shopify index is updated
+                    setTimeout(() => loadOrderCounts(), 5000);
                 }, 2500);
             } else {
                 fbToast(res.error || 'Something went wrong. Please try again.', 'error', 'Fulfillment Failed');

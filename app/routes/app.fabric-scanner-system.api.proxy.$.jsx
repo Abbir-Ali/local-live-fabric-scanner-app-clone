@@ -1,6 +1,6 @@
 import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
-import { getFabricInventory, getFabricOrders, getFulfilledFabricOrders, getPartiallyFulfilledOrders } from "../services/order.server";
+import { getFabricInventory, getFabricOrders, getFulfilledFabricOrders, getPartiallyFulfilledOrders, getPendingOrdersCount, getFulfilledOrdersCount, getPartialOrdersCount } from "../services/order.server";
 import { validateAdminAuth, validateStaffAuth } from "../models/settings.server";
 import { createScanLog } from "../models/logs.server";
 import { getBinLocations } from "../models/binLocations.server";
@@ -74,8 +74,9 @@ export const loader = async ({ request }) => {
         const sortKey = url.searchParams.get("sortKey") || "CREATED_AT";
         const reverse = url.searchParams.get("reverse") === "true";
         const isBinSearch = url.searchParams.get("isBinSearch") === "true";
+        const limit = parseInt(url.searchParams.get("limit") || "5");
 
-        const result = await getFabricInventory(admin, cursor, { query, sortKey, reverse, direction, isBinSearch });
+        const result = await getFabricInventory(admin, cursor, { query, sortKey, reverse, direction, isBinSearch, limit });
 
         // Enrich with bin locations if the direct metafield query returned null
         const invProductIdsNeedingBin = [];
@@ -267,6 +268,21 @@ export const loader = async ({ request }) => {
         }));
 
         return json({ data: { ...result, edges: enhancedEdges, shopDomain: shop.replace('.myshopify.com', '') } });
+      }
+
+      case "counts": {
+        const [pendingCount, partialCount, fulfilledCount] = await Promise.all([
+          getPendingOrdersCount(admin),
+          getPartialOrdersCount(admin),
+          getFulfilledOrdersCount(admin)
+        ]);
+        return json({
+          data: {
+            pending: pendingCount,
+            partial: partialCount,
+            fulfilled: fulfilledCount
+          }
+        });
       }
 
       case "settings": {

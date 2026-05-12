@@ -1,21 +1,21 @@
 <style>
   :root {
-    --p-primary: #C9A273;
-    /* Brass */
-    --p-bg: #F1ECE5;
-    /* Light Beige */
-    --p-white: #FAF7F3;
-    /* Light BG Color */
-    --p-border: #D8BFA4;
-    /* Dark Beige */
-    --p-text: #000000;
-    /* Black */
-    --p-text-subdued: #6b5e58;
-    /* Warm Truffle — readable, neutral */
-    --p-accent: #c4a092;
-    /* Terracotta — original accent */
-    --p-success: #A9CEB2;
-    /* Teal */
+    --p-primary: #25343F;
+    /* Dark Charcoal Navy */
+    --p-bg: #EAEFEF;
+    /* Ice Gray */
+    --p-white: #FFFFFF;
+    /* Pure White */
+    --p-border: #BFC9D1;
+    /* Silver Gray */
+    --p-text: #262626;
+    /* Near Black */
+    --p-text-subdued: #576A8F;
+    /* Muted Blue Slate */
+    --p-accent: #547A95;
+    /* Steel Blue — subtle action */
+    --p-success: #6A7E3F;
+    /* Olive Green — fulfill */
   }
 
   #fabric-scanner-root {
@@ -279,23 +279,24 @@
   }
 
   .fb-btn:hover {
-    background: #b59285;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background: #1A3263;
+    box-shadow: 0 4px 12px rgba(37, 52, 63, 0.3);
+    transform: translateY(-1px);
   }
 
   .fb-btn:disabled {
-    background: var(--p-border);
+    background: #BFC9D1;
     color: var(--p-text-subdued);
     cursor: not-allowed;
   }
 
   .fb-btn-secondary {
-    background: var(--p-text-subdued);
+    background: #576A8F;
     padding: 10px 18px;
   }
 
   .fb-btn-secondary:hover {
-    background: #6b5e58;
+    background: #1A3263;
   }
 
   .fb-btn-success {
@@ -304,11 +305,12 @@
   }
 
   .fb-btn-success:hover {
-    background: #3e4f4d;
+    background: #40513B;
+    box-shadow: 0 4px 12px rgba(106, 126, 63, 0.25);
   }
 
   .fb-view-order-btn {
-    background: var(--p-primary);
+    background: #576A8F;
     color: #fff;
     border: none;
     padding: 8px 14px;
@@ -323,12 +325,12 @@
     gap: 6px;
     white-space: nowrap;
     text-decoration: none;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 4px rgba(87, 106, 143, 0.15);
   }
 
   .fb-view-order-btn:hover {
-    background: #b59285;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    background: #1A3263;
+    box-shadow: 0 4px 12px rgba(26, 50, 99, 0.25);
     transform: translateY(-1px);
   }
 
@@ -366,8 +368,8 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: #EFDFD0;
-    box-shadow: 0 0 16px rgba(239, 223, 208, 0.5);
+    background: #547A95;
+    box-shadow: 0 0 16px rgba(84, 122, 149, 0.4);
   }
 
   .fb-pagination-box {
@@ -759,7 +761,7 @@
     #order-search {
       width: 100%;
       box-sizing: border-box;
-      font-size: 16px;
+      font-size: 12px;
       padding: 10px;
     }
   }
@@ -891,7 +893,7 @@
 
     /* Ensure touch targets are minimum 44px */
     button {
-      min-height: 44px;
+      min-height: 25px;
     }
 
     .fb-order-header {
@@ -1125,7 +1127,7 @@
   }
 
   .fb-toast.fb-toast-error::before {
-    background: #D5AAAC;
+    background: #FF5B5B;
   }
 
   .fb-toast.fb-toast-warning::before {
@@ -1152,8 +1154,8 @@
   }
 
   .fb-toast-error .fb-toast-icon {
-    background: rgba(213, 170, 172, 0.15);
-    color: #8a5a5c;
+    background: rgba(255, 91, 91, 0.1);
+    color: #A82323;
   }
 
   .fb-toast-warning .fb-toast-icon {
@@ -1250,10 +1252,10 @@
   .fb-login-error {
     margin-top: 15px;
     padding: 12px 16px;
-    background: #FAEBE1;
-    border: 1px solid #D5AAAC;
+    background: #FFB2B2;
+    border: 1px solid #FF5B5B;
     border-radius: 8px;
-    color: #5a3a3b;
+    color: #A82323;
     font-size: 13px;
     font-weight: 600;
     display: flex;
@@ -1317,14 +1319,14 @@
 <!-- Full-screen loader (only for login + fulfillment) -->
 <div id="fb-loader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.92); z-index:2147483647; justify-content:center; align-items:center; flex-direction:column; backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);">
   <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
-    <div style="width:44px; height:44px; border:3px solid #E3DDD6; border-top:3px solid #C9A273; border-radius:50%; animation:fbSpin 0.8s linear infinite;"></div>
-    <div style="font-size:13px; font-weight:500; color:#6b5e58; letter-spacing:0.3px;">Processing...</div>
+    <div style="width:44px; height:44px; border:3px solid #E8EDF2; border-top:3px solid #25343F; border-radius:50%; animation:fbSpin 0.8s linear infinite;"></div>
+    <div style="font-size:13px; font-weight:500; color:#576A8F; letter-spacing:0.3px;">Processing...</div>
   </div>
 </div>
 
 <!-- Top progress bar (for tab data loading) -->
-<div id="fb-progress-bar" style="display:none; position:fixed; top:0; left:0; right:0; height:3px; z-index:2147483646; background:#E3DDD6; overflow:hidden; pointer-events:none;">
-  <div style="width:40%; height:100%; background:linear-gradient(90deg, transparent, #C9A273, #EFDFD0, #C9A273, transparent); border-radius:2px; animation:fbSlide 1s ease-in-out infinite;"></div>
+<div id="fb-progress-bar" style="display:none; position:fixed; top:0; left:0; right:0; height:3px; z-index:2147483646; background:#E8EDF2; overflow:hidden; pointer-events:none;">
+  <div style="width:40%; height:100%; background:linear-gradient(90deg, transparent, #547A95, #9CD5FF, #547A95, transparent); border-radius:2px; animation:fbSlide 1s ease-in-out infinite;"></div>
 </div>
 
 <div id="fabric-scanner-root">
@@ -1403,7 +1405,7 @@
       <button
         id="clear-session-btn"
         class="fb-btn"
-        style="width: 100%; margin-top: 10px; background: #D5AAAC; color: #000; display: none;"
+        style="width: 100%; margin-top: 10px; background: #BF4646; color: #fff; display: none;"
       >
         Clear Old Session
       </button>
@@ -1412,7 +1414,7 @@
 
       <div
         id="session-warning"
-        style="display: none; margin-top: 20px; padding: 12px; background: #FAEBE1; border: 1px solid #D5AAAC; border-radius: 8px; font-size: 13px; color: #5a3a3b;"
+        style="display: none; margin-top: 20px; padding: 12px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; font-size: 13px; color: #92400e;"
       >
         ⚠️ You have an old session from a previous app. Click "Clear Old Session" to log in with new credentials.
       </div>
@@ -1427,26 +1429,38 @@
     </div>
 
     <div id="stock-pane" class="fb-pane active">
-      <div class="fb-search-sort-container">
+      <div class="fb-search-sort-container" style="flex-wrap:wrap; gap:8px;">
         <input
           type="text"
           id="inv-search-input"
-          placeholder="Search title, SKU, BIN..."
+          placeholder="Search Title, SKU, BIN..."
           class="fb-input"
-          style="margin:0; height: 38px; padding: 0 15px; border-radius: 8px;"
+          style="margin:0; height: 38px; padding: 0 15px; border-radius: 8px; flex:24 1 0%; min-width:140px;"
         >
-        <select
-          id="inv-sort-select"
-          class="fb-input"
-          style="margin:0; font-size: 13px; height: 38px; padding: 0 8px; border-radius: 8px;"
-        >
-          <option value="CREATED_AT:true">Newest</option>
-          <option value="CREATED_AT:false">Oldest</option>
-          <option value="TITLE:false">A-Z</option>
-          <option value="TITLE:true">Z-A</option>
-          <option value="INVENTORY_TOTAL:false">Low Stock</option>
-          <option value="INVENTORY_TOTAL:true">High Stock</option>
-        </select>
+        <div style="display:flex; gap:6px; flex:4; min-width:180px;">
+          <select
+            id="inv-sort-select"
+            class="fb-input"
+            style="margin:0; font-size:12px; height:38px; padding:0 10px; border-radius:8px; flex:1; background:var(--p-white); border:1px solid var(--p-border); font-weight:600; color:var(--p-text-subdued); appearance:none; -webkit-appearance:none; background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b5e58%22 stroke-width=%222.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-repeat:no-repeat; background-position:right 8px center; padding-right:26px;"
+          >
+            <option value="CREATED_AT:true">⏱ Newest</option>
+            <option value="CREATED_AT:false">⏱ Oldest</option>
+            <option value="TITLE:false">🔤 A-Z</option>
+            <option value="TITLE:true">🔤 Z-A</option>
+            <option value="INVENTORY_TOTAL:false">📉 Low Stock</option>
+            <option value="INVENTORY_TOTAL:true">📈 High Stock</option>
+          </select>
+          <select
+            id="inv-page-size"
+            class="fb-input"
+            style="margin:0; font-size:12px; height:38px; padding:0 8px; border-radius:8px; flex:0 0 auto; width:70px; background:var(--p-white); border:1px solid var(--p-border); font-weight:600; color:var(--p-text-subdued); appearance:none; -webkit-appearance:none; background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b5e58%22 stroke-width=%222.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-repeat:no-repeat; background-position:right 6px center; padding-right:22px; text-align:center;"
+          >
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </select>
+        </div>
       </div>
       <div id="inventory-list"></div>
       <div class="fb-pagination-box" id="stock-pagination" style="display:none;">
@@ -1457,14 +1471,34 @@
     </div>
 
     <div id="orders-pane" class="fb-pane">
+      <div id="order-counts" style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:80px; background:var(--p-white); border:1px solid var(--p-border); border-radius:8px; padding:10px 12px; text-align:center;">
+          <div style="font-size:20px; font-weight:800; color:var(--p-text);" id="count-pending">-</div>
+          <div style="font-size:10px; color:var(--p-text-subdued); font-weight:600; text-transform:uppercase;">Pending</div>
+        </div>
+        <div style="flex:1; min-width:80px; background:var(--p-white); border:1px solid var(--p-border); border-radius:8px; padding:10px 12px; text-align:center;">
+          <div style="font-size:20px; font-weight:800; color:var(--p-accent);" id="count-partial">-</div>
+          <div style="font-size:10px; color:var(--p-text-subdued); font-weight:600; text-transform:uppercase;">Partial</div>
+        </div>
+        <div style="flex:1; min-width:80px; background:var(--p-white); border:1px solid var(--p-border); border-radius:8px; padding:10px 12px; text-align:center;">
+          <div style="font-size:20px; font-weight:800; color:var(--p-success);" id="count-fulfilled">-</div>
+          <div style="font-size:10px; color:var(--p-text-subdued); font-weight:600; text-transform:uppercase;">Fulfilled</div>
+        </div>
+      </div>
       <div class="fb-search-sort-container">
         <input
           type="text"
           id="order-search-input"
-          placeholder="Search order #, name, email, note..."
+          placeholder="Search Order#, Name, Email, Note..."
           class="fb-input"
           style="margin:0; height: 38px; padding: 0 15px; border-radius: 8px;"
         >
+        <select id="order-page-size" class="fb-input" style="margin:0; font-size:12px; height:38px; padding:0 8px; border-radius:8px; flex:0 0 auto; width:70px; background:var(--p-white); border:1px solid var(--p-border); font-weight:600; color:var(--p-text-subdued); appearance:none; -webkit-appearance:none; background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b5e58%22 stroke-width=%222.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-repeat:no-repeat; background-position:right 6px center; padding-right:22px; text-align:center;">
+          <option value="5">5</option>
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+        </select>
       </div>
       <div id="order-container"></div>
       <div class="fb-pagination-box" id="orders-pagination" style="display:none;">
@@ -1483,6 +1517,12 @@
           class="fb-input"
           style="margin:0; height: 38px; padding: 0 15px; border-radius: 8px;"
         >
+        <select id="history-page-size" class="fb-input" style="margin:0; font-size:12px; height:38px; padding:0 8px; border-radius:8px; flex:0 0 auto; width:70px; background:var(--p-white); border:1px solid var(--p-border); font-weight:600; color:var(--p-text-subdued); appearance:none; -webkit-appearance:none; background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b5e58%22 stroke-width=%222.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%226 9 12 15 18 9%22/></svg>'); background-repeat:no-repeat; background-position:right 6px center; padding-right:22px; text-align:center;">
+          <option value="5">5</option>
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+        </select>
       </div>
       <div id="history-container"></div>
       <div class="fb-pagination-box" id="history-pagination" style="display:none;">
@@ -1501,13 +1541,13 @@
   style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:99999; flex-direction:column; align-items:center; justify-content:center;"
 >
   <div style="color:white; font-size:18px; font-weight:bold; margin-bottom:10px; text-align:center; padding: 0 20px;">
-    SCANNING: <span id="scan-target-name" style="color:#c4a092;">--</span>
+    SCANNING: <span id="scan-target-name" style="color:#9CD5FF;">--</span>
   </div>
-  <div id="scan-target-sku" style="color:#EFDFD0; font-size:14px; margin-bottom:15px;">SKU: --</div>
+  <div id="scan-target-sku" style="color:#BFC9D1; font-size:14px; margin-bottom:15px;">SKU: --</div>
   <div
-    style="background:#1a1410; color:#EFDFD0; padding:10px 20px; border-radius:30px; margin-bottom:20px; font-weight:bold; font-size:16px;"
+    style="background:#1A3263; color:#fff; padding:10px 20px; border-radius:30px; margin-bottom:20px; font-weight:bold; font-size:16px;"
   >
-    Scan on <span id="scan-target-bin" style="color:#c4a092;">BIN #--</span>
+    Scan on <span id="scan-target-bin" style="color:#9CD5FF;">BIN #--</span>
   </div>
 
   <div id="scanner-container">
@@ -1525,7 +1565,7 @@
     <button
       id="scanner-cancel-btn"
       class="fb-btn"
-      style="background: #D5AAAC; color: #000; padding: 12px 30px; font-size: 16px;"
+      style="background: #FF5B5B; color: #fff; padding: 12px 30px; font-size: 16px;"
     >
       CANCEL SCAN
     </button>
