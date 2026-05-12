@@ -42,7 +42,8 @@ export async function adjustInventory(admin, inventoryItemId, locationId, delta)
             {
               delta: parseInt(delta, 10),
               inventoryItemId: inventoryItemId,
-              locationId: locationId
+              locationId: locationId,
+              changeFromQuantity: null
             }
           ]
         }
@@ -184,12 +185,12 @@ export async function setInventory(admin, inventoryItemId, locationId, quantity)
         input: {
           reason: "correction",
           name: "available",
-          ignoreCompareQuantity: true, // Required in API 2026-01 to skip compare-and-swap
           quantities: [
             {
               quantity: parseInt(quantity, 10),
               inventoryItemId: inventoryItemId,
-              locationId: locationId
+              locationId: locationId,
+              changeFromQuantity: null
             }
           ]
         }
